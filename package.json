@@ -14,7 +14,7 @@
     "@upstash/qstash": "^2.10.1",
     "drizzle-orm": "^0.45.1",
     "grammy": "^1.41.1",
-    "next": "15.2.4",
+    "next": "16.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "swr": "^2.4.1"
