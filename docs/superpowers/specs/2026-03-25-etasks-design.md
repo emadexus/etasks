@@ -54,8 +54,11 @@ A minimalistic task tracker that lives inside Telegram. Add the bot to a group c
 | first_name | text | Display name |
 | role | text | 'admin' or 'member' |
 | joined_at | timestamp | Default now() |
+| left_at | timestamp | Nullable. Set when member leaves group, never hard-deleted |
 
 Unique constraint on `(board_id, telegram_user_id)`.
+
+Members are **soft-removed** — when a user leaves the group, `left_at` is set. Their tasks and comments remain intact with valid FKs. They're excluded from assignee pickers and member counts, but historical references (created_by, comments) still resolve. If they rejoin, `left_at` is cleared.
 
 ### tasks
 | Column | Type | Notes |
@@ -100,7 +103,9 @@ Default reminder on task creation: **24h**.
 - Users authenticate via Telegram Mini App `initData` — validated server-side using the bot token.
 - No separate auth system. Telegram user ID is the identity.
 - `initData` contains the `chat_id` (which group the mini app was opened from), used to resolve which board the user is viewing. API routes derive the board from this.
-- Group membership determines board access. The bot syncs members when added to a group. Members are re-synced when the mini app is opened (lightweight check against `getChatMember`).
+- Group membership determines board access. Initial member list synced when bot is added to group.
+- **Lazy sync (current user only)**: when a user opens the mini app, we check/upsert only *their* member record (via `getChatMember` for that one user). We do NOT re-sync the full member list on every open — that's expensive and permission-sensitive.
+- Full member list refresh only happens on explicit bot events (new member joined, member left).
 
 ## Authorization
 
@@ -191,10 +196,14 @@ The `/api/notify/deadline` route validates the QStash signature to ensure it's a
 - **Task assigned/reassigned** → DM to new assignee
 
 ### Scheduled notifications (via QStash)
-- On task creation: schedule reminders at `deadline - offset` for each active reminder preset (default: 24h)
-- On deadline change: cancel all pending QStash messages for the task, reschedule
-- On reminder toggle: schedule or cancel the specific QStash message
-- On task completed: cancel all pending reminders
+
+QStash is a **wake-up timer**, not a message sender. It only carries the `task_id` and `reminder_id`. When the callback fires, Vercel looks up the task, checks who to notify, and sends via bot.
+
+- On task creation: schedule QStash calls at `deadline - offset` for each active reminder preset (default: 24h). Payload: `{ task_id, reminder_id }`.
+- On deadline change: cancel all pending QStash messages for the task, reschedule with new times.
+- On reminder toggle: schedule or cancel the specific QStash message.
+- On task completed: cancel all pending reminders.
+- **Callback handler** (`/api/notify/deadline`): receives `task_id` + `reminder_id` → loads task from DB → checks it's still active and not done → resolves assignee and group → sends bot messages → marks reminder as `sent`.
 
 ## Project Structure
 
