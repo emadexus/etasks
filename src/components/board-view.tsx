@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import useSWR from "swr";
 import { useTelegram } from "@/components/telegram-provider";
 import { useTasks, useMembers, useTaskActions } from "@/hooks/use-board";
 import { TaskCard } from "./task-card";
@@ -9,8 +10,59 @@ import { FilterChips } from "./filter-chips";
 import { FilterPanel } from "./filter-panel";
 import { TaskDetailSheet } from "./task-detail-sheet";
 
+function BoardPicker({ onSelect }: { onSelect: (chatId: string) => void }) {
+  const { initData } = useTelegram();
+  const fetcher = async (url: string) => {
+    const res = await fetch(url, {
+      headers: initData ? { "x-telegram-init-data": initData } : {},
+    });
+    if (!res.ok) return [];
+    return res.json();
+  };
+  const { data: boards, isLoading } = useSWR("/api/boards", fetcher);
+
+  return (
+    <div className="mx-auto min-h-screen max-w-lg px-4 py-8">
+      <div className="mb-6">
+        <div className="text-[20px] font-semibold tracking-tight">etasks</div>
+        <div className="mt-1 text-[12px]" style={{ color: "var(--text-muted)" }}>
+          Your task boards
+        </div>
+      </div>
+
+      {isLoading && (
+        <p className="py-8 text-center text-[12px]" style={{ color: "var(--text-muted)" }}>Loading boards...</p>
+      )}
+
+      {!isLoading && (!boards || boards.length === 0) && (
+        <div className="py-12 text-center">
+          <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>No boards yet.</p>
+          <p className="mt-2 text-[11px]" style={{ color: "var(--text-dim)" }}>
+            Add @e_task_bot to a Telegram group to create a board.
+          </p>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        {(boards || []).map((board: any) => (
+          <button
+            key={board.id}
+            className="rounded-xl border p-4 text-left transition-all active:scale-[0.98]"
+            style={{ background: "var(--bg-card)", borderColor: "var(--border-card)" }}
+            onClick={() => onSelect(board.chatId)}
+          >
+            <div className="text-[14px] font-medium">{board.name}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function BoardView() {
-  const { chatId, userId, ready } = useTelegram();
+  const { chatId: initialChatId, userId, ready } = useTelegram();
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const chatId = selectedChatId || initialChatId;
   const [quickFilter, setQuickFilter] = useState("all");
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, string>>({});
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
@@ -34,11 +86,7 @@ export function BoardView() {
   }
 
   if (!chatId) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-6 text-center">
-        <p style={{ color: "var(--text-muted)" }}>Open this app from a Telegram group to get started.</p>
-      </div>
-    );
+    return <BoardPicker onSelect={setSelectedChatId} />;
   }
 
   const allTasks = tasksData?.tasks || [];
@@ -56,10 +104,21 @@ export function BoardView() {
   return (
     <div className="mx-auto min-h-screen max-w-lg px-4 py-5">
       <div className="mb-5 flex items-center justify-between">
-        <div>
-          <div className="text-[17px] font-semibold tracking-tight">{boardName}</div>
-          <div className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-            {memberCount} member{memberCount !== 1 ? "s" : ""}
+        <div className="flex items-center gap-3">
+          {selectedChatId && (
+            <button
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-[14px]"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+              onClick={() => setSelectedChatId(null)}
+            >
+              &#8592;
+            </button>
+          )}
+          <div>
+            <div className="text-[17px] font-semibold tracking-tight">{boardName}</div>
+            <div className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+              {memberCount} member{memberCount !== 1 ? "s" : ""}
+            </div>
           </div>
         </div>
         <button className="flex h-8 w-8 items-center justify-center rounded-lg text-[14px]"
