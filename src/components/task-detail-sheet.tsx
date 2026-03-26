@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTaskDetail, useComments, useTaskActions, useMembers } from "@/hooks/use-board";
 import { CommentThread } from "./comment-thread";
 import { ReminderChips } from "./reminder-chips";
@@ -96,8 +96,6 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
   const { data: commentsData, mutate: mutateComments } = useComments(taskId);
   const { data: membersData } = useMembers(chatId);
   const { updateTask, addComment } = useTaskActions(chatId);
-  const dateRef = useRef<HTMLInputElement>(null);
-
   // Local optimistic state
   const [localTask, setLocalTask] = useState<any>(null);
   const [localReminders, setLocalReminders] = useState<string[]>([]);
@@ -177,25 +175,20 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
               onChange={(id) => handleUpdate("assigneeId", id)}
             />
             <span>&middot;</span>
-            {/* Due date — visible input trigger */}
-            <span className="relative inline-block">
-              <span
-                className="cursor-pointer text-[11px] transition-colors active:opacity-70"
-                style={{ color: isOverdue ? "var(--accent-red)" : "var(--text-primary)" }}
-                onClick={() => dateRef.current?.showPicker?.() || dateRef.current?.click()}
-              >
-                {deadlineDisplay}
-              </span>
-              <input
-                ref={dateRef}
-                type="datetime-local"
-                className="pointer-events-none absolute left-0 top-0 h-0 w-0 opacity-0"
-                value={toLocalInput(deadlineDate)}
-                onChange={(e) => {
-                  if (e.target.value) handleUpdate("deadline", new Date(e.target.value).toISOString());
-                }}
-              />
-            </span>
+            {/* Due date — native input, styled inline */}
+            <input
+              type="datetime-local"
+              className="cursor-pointer rounded bg-transparent px-1 py-0.5 text-[11px] outline-none"
+              style={{
+                color: isOverdue ? "var(--accent-red)" : "var(--text-primary)",
+                colorScheme: "dark",
+                WebkitAppearance: "none",
+              }}
+              value={toLocalInput(deadlineDate)}
+              onChange={(e) => {
+                if (e.target.value) handleUpdate("deadline", new Date(e.target.value).toISOString());
+              }}
+            />
           </div>
 
           {/* Reminders */}

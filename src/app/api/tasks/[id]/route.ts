@@ -16,7 +16,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const reminders = await getRemindersForTask(id);
 
-  return NextResponse.json({ ...result, reminders });
+  // Convert BigInt fields for JSON serialization
+  return NextResponse.json({
+    task: result.task,
+    assignee: result.assignee ? {
+      ...result.assignee,
+      telegramUserId: result.assignee.telegramUserId.toString(),
+    } : null,
+    reminders,
+  });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

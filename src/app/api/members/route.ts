@@ -15,5 +15,9 @@ export async function GET(req: NextRequest) {
   await upsertMember(board.id, auth.userId, auth.username, auth.firstName);
 
   const membersList = await getActiveMembers(board.id);
-  return NextResponse.json(membersList);
+  // Convert BigInt fields to strings for JSON serialization
+  return NextResponse.json(membersList.map(m => ({
+    ...m,
+    telegramUserId: m.telegramUserId.toString(),
+  })));
 }

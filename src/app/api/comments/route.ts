@@ -14,7 +14,11 @@ export async function GET(req: NextRequest) {
   if (!taskId) return NextResponse.json({ error: "taskId required" }, { status: 400 });
 
   const result = await getCommentsForTask(taskId);
-  return NextResponse.json(result);
+  // Convert BigInt fields in author to strings
+  return NextResponse.json(result.map(r => ({
+    comment: r.comment,
+    author: { ...r.author, telegramUserId: r.author.telegramUserId.toString() },
+  })));
 }
 
 export async function POST(req: NextRequest) {
