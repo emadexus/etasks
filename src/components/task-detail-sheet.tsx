@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTaskDetail, useComments, useTaskActions, useMembers } from "@/hooks/use-board";
 import { CommentThread } from "./comment-thread";
 import { ReminderChips } from "./reminder-chips";
@@ -11,77 +11,83 @@ interface TaskDetailSheetProps {
   onClose: () => void;
 }
 
-const statusOptions = [
-  { key: "todo", label: "To do", color: "var(--text-muted)" },
-  { key: "in_progress", label: "In progress", color: "var(--accent-blue)" },
-  { key: "done", label: "Done", color: "#22c55e" },
-];
+const statusMap: Record<string, { label: string; color: string; next: string }> = {
+  todo: { label: "To do", color: "var(--text-muted)", next: "in_progress" },
+  in_progress: { label: "In progress", color: "var(--accent-blue)", next: "done" },
+  done: { label: "Done", color: "#22c55e", next: "todo" },
+};
 
-const priorityOptions = [
-  { key: "low", label: "Low", color: "var(--text-dim)" },
-  { key: "medium", label: "Medium", color: "var(--accent-yellow)" },
-  { key: "high", label: "High", color: "var(--accent-orange)" },
-];
+const priorityMap: Record<string, { label: string; color: string; next: string }> = {
+  low: { label: "Low", color: "var(--text-dim)", next: "medium" },
+  medium: { label: "Medium", color: "var(--accent-yellow)", next: "high" },
+  high: { label: "High", color: "var(--accent-orange)", next: "low" },
+};
 
-function DeadlinePicker({ deadline, onChange }: { deadline: Date; onChange: (d: Date) => void }) {
-  // Format for datetime-local input: "YYYY-MM-DDThh:mm"
-  const toLocalInput = (d: Date) => {
-    const pad = (n: number) => n.toString().padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
-
-  const display = deadline.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-  const isOverdue = deadline.getTime() < Date.now();
-
+// Inline tappable label that cycles through options
+function CycleLabel({ value, map, onCycle }: {
+  value: string;
+  map: Record<string, { label: string; color: string; next: string }>;
+  onCycle: (next: string) => void;
+}) {
+  const item = map[value] || Object.values(map)[0];
   return (
-    <div className="relative">
-      <label className="block cursor-pointer rounded-lg px-2.5 py-1.5 text-[11px]"
-        style={{ background: "rgba(255,255,255,0.03)" }}>
-        <span style={{ color: "var(--text-muted)" }}>Due</span><br />
-        <span style={{ color: isOverdue ? "var(--accent-red)" : "var(--text-primary)" }}>{display}</span>
-        <input
-          type="datetime-local"
-          className="absolute inset-0 cursor-pointer opacity-0"
-          value={toLocalInput(deadline)}
-          onChange={(e) => {
-            if (e.target.value) onChange(new Date(e.target.value));
-          }}
-        />
-      </label>
-    </div>
+    <span
+      className="cursor-pointer rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors active:opacity-70"
+      style={{ color: item.color, background: `${item.color}15` }}
+      onClick={(e) => { e.stopPropagation(); onCycle(item.next); }}
+    >
+      {item.label}
+    </span>
   );
 }
 
-function MetaChip({ label, value, valueColor, options, onChange }: {
-  label: string; value: string; valueColor: string;
-  options?: { key: string; label: string; color: string }[];
-  onChange?: (key: string) => void;
+// Assignee picker — shows as inline text, tappable to show member list
+function AssigneePicker({ assignee, members, onChange }: {
+  assignee: any;
+  members: any[];
+  onChange: (memberId: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
+
   return (
-    <div className="relative">
-      <button className="rounded-lg px-2.5 py-1.5 text-[11px]"
-        style={{ background: "rgba(255,255,255,0.03)" }}
-        onClick={(e) => { e.stopPropagation(); options && setOpen(!open); }}>
-        <span style={{ color: "var(--text-muted)" }}>{label}</span><br />
-        <span style={{ color: valueColor }}>{value}</span>
-      </button>
-      {open && options && (
+    <span className="relative inline-block">
+      <span
+        className="cursor-pointer text-[11px] transition-colors active:opacity-70"
+        style={{ color: assignee ? "var(--accent-blue)" : "var(--text-dim)" }}
+        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+      >
+        {assignee ? `@${assignee.username || assignee.firstName}` : "unassigned"}
+      </span>
+      {open && (
         <>
           <div className="fixed inset-0 z-[55]" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full z-[60] mt-1 min-w-[120px] rounded-lg border p-1 shadow-lg"
+          <div className="absolute left-0 top-full z-[60] mt-1 min-w-[140px] rounded-lg border p-1 shadow-lg"
             style={{ background: "var(--bg-primary)", borderColor: "var(--border-card)" }}>
-            {options.map((o) => (
-              <button key={o.key} className="block w-full rounded px-3 py-2 text-left text-[12px] transition-colors hover:bg-white/5"
-                style={{ color: o.color }}
-                onClick={(e) => { e.stopPropagation(); onChange?.(o.key); setOpen(false); }}>
-                {o.label}
+            <button
+              className="block w-full rounded px-3 py-2 text-left text-[12px] transition-colors hover:bg-white/5"
+              style={{ color: "var(--text-muted)" }}
+              onClick={(e) => { e.stopPropagation(); onChange(null); setOpen(false); }}
+            >
+              Unassign
+            </button>
+            {members.map((m: any) => (
+              <button key={m.id}
+                className="block w-full rounded px-3 py-2 text-left text-[12px] transition-colors hover:bg-white/5"
+                style={{ color: "var(--text-primary)" }}
+                onClick={(e) => { e.stopPropagation(); onChange(m.id); setOpen(false); }}
+              >
+                {m.firstName} {m.username ? `@${m.username}` : ""}
               </button>
             ))}
+            {members.length === 0 && (
+              <div className="px-3 py-2 text-[11px]" style={{ color: "var(--text-dim)" }}>
+                No members found
+              </div>
+            )}
           </div>
         </>
       )}
-    </div>
+    </span>
   );
 }
 
@@ -90,6 +96,7 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
   const { data: commentsData, mutate: mutateComments } = useComments(taskId);
   const { data: membersData } = useMembers(chatId);
   const { updateTask, addComment } = useTaskActions(chatId);
+  const dateRef = useRef<HTMLInputElement>(null);
 
   // Local optimistic state
   const [localTask, setLocalTask] = useState<any>(null);
@@ -110,12 +117,8 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
     }
   }, [taskData]);
 
-  // Optimistic update — update local state immediately, then fire API in background
   const handleUpdate = useCallback(async (field: string, value: any) => {
-    // Update local state immediately
     setLocalTask((prev: any) => prev ? { ...prev, [field]: value } : prev);
-
-    // Fire API in background — no await blocking the UI
     updateTask(localTask?.id || taskId!, { [field]: value })
       .then(() => mutateTask())
       .catch(console.error);
@@ -125,10 +128,17 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
 
   const task = localTask;
   const assignee = taskData?.assignee;
-
-  const currentStatus = statusOptions.find((s) => s.key === task.status) || statusOptions[0];
-  const currentPriority = priorityOptions.find((p) => p.key === task.priority) || priorityOptions[1];
   const deadlineDate = new Date(task.deadline);
+  const isOverdue = deadlineDate.getTime() < Date.now();
+
+  const deadlineDisplay = deadlineDate.toLocaleDateString("en-US", {
+    month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
+  });
+
+  const toLocalInput = (d: Date) => {
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
 
   return (
     <>
@@ -155,30 +165,46 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
             value={description} onChange={(e) => setDescription(e.target.value)}
             onBlur={() => description !== (task.description || "") && handleUpdate("description", description)} />
 
-          {/* Meta chips */}
-          <div className="mb-3 flex flex-wrap gap-2">
-            <MetaChip label="Status" value={currentStatus.label} valueColor={currentStatus.color}
-              options={statusOptions} onChange={(key) => handleUpdate("status", key)} />
-            <MetaChip label="Priority" value={currentPriority.label} valueColor={currentPriority.color}
-              options={priorityOptions} onChange={(key) => handleUpdate("priority", key)} />
-            <MetaChip label="Assignee" value={assignee?.firstName || "None"} valueColor="var(--text-primary)"
-              options={[
-                { key: "", label: "None", color: "var(--text-muted)" },
-                ...(membersData || []).map((m: any) => ({ key: m.id, label: m.firstName, color: "var(--text-primary)" })),
-              ]}
-              onChange={(key) => handleUpdate("assigneeId", key || null)} />
-            <DeadlinePicker deadline={deadlineDate} onChange={(d) => handleUpdate("deadline", d.toISOString())} />
+          {/* Inline meta row — concise, tappable */}
+          <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[11px]" style={{ color: "var(--text-muted)" }}>
+            <CycleLabel value={task.status} map={statusMap} onCycle={(next) => handleUpdate("status", next)} />
+            <span>&middot;</span>
+            <CycleLabel value={task.priority} map={priorityMap} onCycle={(next) => handleUpdate("priority", next)} />
+            <span>&middot;</span>
+            <AssigneePicker
+              assignee={assignee}
+              members={membersData || []}
+              onChange={(id) => handleUpdate("assigneeId", id)}
+            />
+            <span>&middot;</span>
+            {/* Due date — visible input trigger */}
+            <span className="relative inline-block">
+              <span
+                className="cursor-pointer text-[11px] transition-colors active:opacity-70"
+                style={{ color: isOverdue ? "var(--accent-red)" : "var(--text-primary)" }}
+                onClick={() => dateRef.current?.showPicker?.() || dateRef.current?.click()}
+              >
+                {deadlineDisplay}
+              </span>
+              <input
+                ref={dateRef}
+                type="datetime-local"
+                className="pointer-events-none absolute left-0 top-0 h-0 w-0 opacity-0"
+                value={toLocalInput(deadlineDate)}
+                onChange={(e) => {
+                  if (e.target.value) handleUpdate("deadline", new Date(e.target.value).toISOString());
+                }}
+              />
+            </span>
           </div>
 
           {/* Reminders */}
           <div className="mb-3">
             <ReminderChips activeOffsets={localReminders}
               onToggle={(offset, enabled) => {
-                // Optimistic toggle
                 setLocalReminders(prev =>
                   enabled ? [...prev, offset] : prev.filter(o => o !== offset)
                 );
-                // Fire API in background
                 updateTask(task.id, { reminders: { [offset]: enabled } })
                   .then(() => mutateTask())
                   .catch(console.error);
