@@ -96,15 +96,18 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
   const { data: commentsData, mutate: mutateComments } = useComments(taskId);
   const { data: membersData } = useMembers(chatId);
   const { updateTask, addComment } = useTaskActions(chatId);
+
   // Local optimistic state
   const [localTask, setLocalTask] = useState<any>(null);
   const [localReminders, setLocalReminders] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [pendingUpdates, setPendingUpdates] = useState(0);
+  const [saving, setSaving] = useState(false);
 
-  // Sync from server data
+  // Sync from server data — but ONLY when no updates are in flight
   useEffect(() => {
-    if (taskData?.task) {
+    if (taskData?.task && pendingUpdates === 0) {
       setLocalTask(taskData.task);
       setTitle(taskData.task.title);
       setDescription(taskData.task.description || "");
@@ -112,14 +115,27 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
         .filter((r: any) => !r.sent)
         .map((r: any) => r.offsetLabel);
       setLocalReminders(offsets);
+      setSaving(false);
     }
-  }, [taskData]);
+  }, [taskData, pendingUpdates]);
 
   const handleUpdate = useCallback(async (field: string, value: any) => {
+    // Optimistic: update UI instantly
     setLocalTask((prev: any) => prev ? { ...prev, [field]: value } : prev);
+    setSaving(true);
+    setPendingUpdates(n => n + 1);
+
+    // API in background
     updateTask(localTask?.id || taskId!, { [field]: value })
-      .then(() => mutateTask())
-      .catch(console.error);
+      .then(() => {
+        setPendingUpdates(n => n - 1);
+        mutateTask(); // refetch server state — will sync once pending hits 0
+      })
+      .catch((e) => {
+        console.error(e);
+        setPendingUpdates(n => n - 1);
+        setSaving(false);
+      });
   }, [localTask, taskId, updateTask, mutateTask]);
 
   if (!taskId || !localTask) return null;
@@ -145,9 +161,12 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
         className="fixed inset-x-0 bottom-0 z-50 flex max-h-[90vh] flex-col rounded-t-2xl border-t"
         style={{ background: "var(--bg-secondary)", borderColor: "rgba(255,255,255,0.08)" }}
       >
-        {/* Handle */}
+        {/* Handle + saving indicator */}
         <div className="flex-shrink-0 px-4 pt-3">
-          <div className="mx-auto mb-3 h-1 w-9 rounded-full" style={{ background: "var(--text-dim)" }} />
+          <div className="mx-auto mb-1 h-1 w-9 rounded-full" style={{ background: "var(--text-dim)" }} />
+          <div className="h-4 text-center text-[10px]" style={{ color: "var(--text-dim)" }}>
+            {saving ? "Saving..." : ""}
+          </div>
         </div>
 
         {/* Scrollable content */}
