@@ -34,6 +34,13 @@ export function validateInitData(initData: string): { userId: bigint; username: 
 
 export function getAuthFromRequest(req: Request) {
   const initData = req.headers.get("x-telegram-init-data");
-  if (!initData) return null;
-  return validateInitData(initData);
+  if (!initData) {
+    console.warn("No x-telegram-init-data header");
+    return null;
+  }
+  const result = validateInitData(initData);
+  if (!result) {
+    console.warn("initData validation failed");
+  }
+  return result;
 }

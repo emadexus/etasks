@@ -52,8 +52,11 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         }
         const userId = tg.initDataUnsafe?.user?.id?.toString() || null;
 
+        console.log("[TG] initData:", initDataRaw ? `${initDataRaw.slice(0, 50)}...` : "null");
+        console.log("[TG] chatId:", chatId, "userId:", userId, "openTaskId:", openTaskId);
         setCtx({ initData: initDataRaw, chatId, userId, openTaskId, ready: true });
       } else {
+        console.log("[TG] No Telegram WebApp global found");
         // Dev fallback
         const chatId = new URLSearchParams(window.location.search).get("chatId");
         setCtx({ initData: null, chatId, userId: null, openTaskId: null, ready: true });

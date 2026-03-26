@@ -1,25 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import useSWR from "swr";
 import { useTelegram } from "@/components/telegram-provider";
 import { useTasks, useMembers, useTaskActions, useBoards, useTaskDetail } from "@/hooks/use-board";
 import { TaskCard } from "./task-card";
 import { QuickAdd } from "./quick-add";
 import { FilterChips } from "./filter-chips";
-import { FilterPanel } from "./filter-panel";
 import { TaskDetailSheet } from "./task-detail-sheet";
 
 function BoardPicker({ onSelect }: { onSelect: (chatId: string) => void }) {
-  const { initData } = useTelegram();
-  const fetcher = async (url: string) => {
-    const res = await fetch(url, {
-      headers: initData ? { "x-telegram-init-data": initData } : {},
-    });
-    if (!res.ok) return [];
-    return res.json();
-  };
-  const { data: boards, isLoading } = useSWR("/api/boards", fetcher);
+  const { data: boards, isLoading } = useBoards();
 
   return (
     <div className="mx-auto min-h-screen max-w-lg px-4 py-8">
@@ -59,50 +49,40 @@ function BoardPicker({ onSelect }: { onSelect: (chatId: string) => void }) {
   );
 }
 
-function useDeepLinkResolution(openTaskId: string | null) {
-  const { data: taskData } = useTaskDetail(openTaskId);
-  const { data: boardsList } = useBoards();
-  const [resolved, setResolved] = useState<{ chatId: string; taskId: string } | null>(null);
-
-  useEffect(() => {
-    if (!openTaskId || resolved) return;
-    if (!taskData?.task || !boardsList) return;
-    const boardId = taskData.task.boardId;
-    const board = (boardsList as any[]).find((b: any) => b.id === boardId);
-    if (board) {
-      setResolved({ chatId: board.chatId, taskId: openTaskId });
-    }
-  }, [openTaskId, taskData, boardsList, resolved]);
-
-  return resolved;
-}
-
 export function BoardView() {
   const { chatId: initialChatId, userId, openTaskId, ready } = useTelegram();
+
+  // "showBoardPicker" explicitly controls whether we show the picker
+  const [showBoardPicker, setShowBoardPicker] = useState(false);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const deepLink = useDeepLinkResolution(openTaskId);
-
-  // When a deep link resolves, auto-select the chat and task
-  useEffect(() => {
-    if (deepLink && !selectedChatId) {
-      setSelectedChatId(deepLink.chatId);
-      setSelectedTaskId(deepLink.taskId);
-    }
-  }, [deepLink, selectedChatId]);
-
-  const chatId = selectedChatId || initialChatId;
   const [quickFilter, setQuickFilter] = useState("all");
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, string>>({});
-  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+
+  // Resolve deep link: task ID → find board chatId
+  const { data: deepLinkTask } = useTaskDetail(openTaskId);
+  const { data: boardsList } = useBoards();
+
+  useEffect(() => {
+    if (!openTaskId || selectedChatId) return;
+    if (!deepLinkTask?.task || !boardsList) return;
+    const boardId = deepLinkTask.task.boardId;
+    const board = (boardsList as any[]).find((b: any) => b.id === boardId);
+    if (board) {
+      setSelectedChatId(board.chatId);
+      setSelectedTaskId(openTaskId);
+    }
+  }, [openTaskId, deepLinkTask, boardsList, selectedChatId]);
+
+  const chatId = selectedChatId || initialChatId;
 
   const apiFilters: Record<string, string> = { ...advancedFilters };
   if (quickFilter === "todo") apiFilters.status = "todo";
   if (quickFilter === "in_progress") apiFilters.status = "in_progress";
   if (quickFilter === "done") apiFilters.status = "done";
 
-  const { data: tasksData, isLoading } = useTasks(chatId, apiFilters);
-  const { data: membersData } = useMembers(chatId);
+  const { data: tasksData, isLoading } = useTasks(chatId && !showBoardPicker ? chatId : null, apiFilters);
+  const { data: membersData } = useMembers(chatId && !showBoardPicker ? chatId : null);
   const { createTask, updateTask } = useTaskActions(chatId);
 
   if (!ready) {
@@ -113,8 +93,16 @@ export function BoardView() {
     );
   }
 
-  if (!chatId) {
-    return <BoardPicker onSelect={setSelectedChatId} />;
+  // Show board picker if no chatId OR user explicitly navigated to it
+  if (!chatId || showBoardPicker) {
+    return (
+      <BoardPicker
+        onSelect={(id) => {
+          setSelectedChatId(id);
+          setShowBoardPicker(false);
+        }}
+      />
+    );
   }
 
   const allTasks = tasksData?.tasks || [];
@@ -133,15 +121,6 @@ export function BoardView() {
     <div className="mx-auto min-h-screen max-w-lg px-4 py-5">
       <div className="mb-5 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {selectedChatId && (
-            <button
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-[14px]"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
-              onClick={() => setSelectedChatId(null)}
-            >
-              &#8592;
-            </button>
-          )}
           <div>
             <div className="text-[17px] font-semibold tracking-tight">{boardName}</div>
             <div className="text-[11px]" style={{ color: "var(--text-muted)" }}>
@@ -149,10 +128,11 @@ export function BoardView() {
             </div>
           </div>
         </div>
+        {/* Burger → board picker */}
         <button
           className="flex h-8 w-8 items-center justify-center rounded-lg text-[14px]"
           style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
-          onClick={() => setSelectedChatId(null)}
+          onClick={() => setShowBoardPicker(true)}
           title="Switch board"
         >
           &#8801;
@@ -183,17 +163,6 @@ export function BoardView() {
       </div>
 
       <TaskDetailSheet taskId={selectedTaskId} chatId={chatId} onClose={() => setSelectedTaskId(null)} />
-      <FilterPanel open={filterPanelOpen} onClose={() => setFilterPanelOpen(false)}
-        members={(membersData || []).map((m: any) => ({ id: m.id, firstName: m.firstName }))}
-        initial={advancedFilters}
-        onApply={(filters) => {
-          const f: Record<string, string> = {};
-          if (filters.status) f.status = filters.status;
-          if (filters.priority) f.priority = filters.priority;
-          if (filters.assigneeId) f.assigneeId = filters.assigneeId;
-          if (filters.sortBy) f.sortBy = filters.sortBy;
-          setAdvancedFilters(f);
-        }} />
     </div>
   );
 }
