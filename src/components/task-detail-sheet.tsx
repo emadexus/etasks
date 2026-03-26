@@ -23,6 +23,35 @@ const priorityOptions = [
   { key: "high", label: "High", color: "var(--accent-orange)" },
 ];
 
+function DeadlinePicker({ deadline, onChange }: { deadline: Date; onChange: (d: Date) => void }) {
+  // Format for datetime-local input: "YYYY-MM-DDThh:mm"
+  const toLocalInput = (d: Date) => {
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const display = deadline.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  const isOverdue = deadline.getTime() < Date.now();
+
+  return (
+    <div className="relative">
+      <label className="block cursor-pointer rounded-lg px-2.5 py-1.5 text-[11px]"
+        style={{ background: "rgba(255,255,255,0.03)" }}>
+        <span style={{ color: "var(--text-muted)" }}>Due</span><br />
+        <span style={{ color: isOverdue ? "var(--accent-red)" : "var(--text-primary)" }}>{display}</span>
+        <input
+          type="datetime-local"
+          className="absolute inset-0 cursor-pointer opacity-0"
+          value={toLocalInput(deadline)}
+          onChange={(e) => {
+            if (e.target.value) onChange(new Date(e.target.value));
+          }}
+        />
+      </label>
+    </div>
+  );
+}
+
 function MetaChip({ label, value, valueColor, options, onChange }: {
   label: string; value: string; valueColor: string;
   options?: { key: string; label: string; color: string }[];
@@ -138,9 +167,7 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
                 ...(membersData || []).map((m: any) => ({ key: m.id, label: m.firstName, color: "var(--text-primary)" })),
               ]}
               onChange={(key) => handleUpdate("assigneeId", key || null)} />
-            <MetaChip label="Due"
-              value={deadlineDate.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-              valueColor={deadlineDate.getTime() < Date.now() ? "var(--accent-red)" : "var(--text-primary)"} />
+            <DeadlinePicker deadline={deadlineDate} onChange={(d) => handleUpdate("deadline", d.toISOString())} />
           </div>
 
           {/* Reminders */}

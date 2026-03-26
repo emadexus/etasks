@@ -16,6 +16,12 @@ function useAuthFetcher() {
   }, [initData]);
 }
 
+// Gate: returns true only when we have auth ready
+function useAuthReady() {
+  const { initData, ready } = useTelegram();
+  return ready && !!initData;
+}
+
 function useAuthMutate() {
   const { initData } = useTelegram();
 
@@ -52,18 +58,21 @@ function revalidateComments() {
 
 export function useMembers(chatId: string | null) {
   const fetcher = useAuthFetcher();
-  return useSWR(chatId ? `/api/members?chatId=${chatId}` : null, fetcher, {
+  const authReady = useAuthReady();
+  // Only fetch when both chatId AND auth are ready
+  return useSWR(authReady && chatId ? `/api/members?chatId=${chatId}` : null, fetcher, {
     revalidateOnFocus: false,
   });
 }
 
 export function useTasks(chatId: string | null, filters?: Record<string, string>) {
   const fetcher = useAuthFetcher();
+  const authReady = useAuthReady();
   const key = useMemo(() => {
-    if (!chatId) return null;
+    if (!authReady || !chatId) return null;
     const params = new URLSearchParams({ chatId, ...filters });
     return `/api/tasks?${params}`;
-  }, [chatId, filters]);
+  }, [authReady, chatId, filters]);
   return useSWR(key, fetcher, {
     revalidateOnFocus: false,
     keepPreviousData: true,
@@ -72,7 +81,8 @@ export function useTasks(chatId: string | null, filters?: Record<string, string>
 
 export function useTaskDetail(taskId: string | null) {
   const fetcher = useAuthFetcher();
-  return useSWR(taskId ? `/api/tasks/${taskId}` : null, fetcher, {
+  const authReady = useAuthReady();
+  return useSWR(authReady && taskId ? `/api/tasks/${taskId}` : null, fetcher, {
     revalidateOnFocus: false,
     keepPreviousData: true,
   });
@@ -80,7 +90,8 @@ export function useTaskDetail(taskId: string | null) {
 
 export function useComments(taskId: string | null) {
   const fetcher = useAuthFetcher();
-  return useSWR(taskId ? `/api/comments?taskId=${taskId}` : null, fetcher, {
+  const authReady = useAuthReady();
+  return useSWR(authReady && taskId ? `/api/comments?taskId=${taskId}` : null, fetcher, {
     revalidateOnFocus: false,
     keepPreviousData: true,
   });
@@ -88,7 +99,9 @@ export function useComments(taskId: string | null) {
 
 export function useBoards() {
   const fetcher = useAuthFetcher();
-  return useSWR("/api/boards", fetcher, {
+  const authReady = useAuthReady();
+  // Only fetch when auth is ready — prevents 401 on initial load
+  return useSWR(authReady ? "/api/boards" : null, fetcher, {
     revalidateOnFocus: false,
   });
 }
@@ -104,9 +117,7 @@ export function useTaskActions(chatId: string | null) {
     },
     updateTask: async (id: string, data: object) => {
       const result = await api(`/api/tasks/${id}`, "PATCH", data);
-      // Silently revalidate — no flash, no reload
       revalidateTasks();
-      // Also revalidate the specific task detail
       mutate(`/api/tasks/${id}`);
       return result;
     },
