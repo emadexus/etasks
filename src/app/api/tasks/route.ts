@@ -6,6 +6,7 @@ import { tasks, members, comments } from "@/lib/db/schema";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { notifyGroup, notifyUser, formatNewTask } from "@/lib/telegram/notify";
 import { scheduleReminders } from "@/lib/qstash/reminders";
+import type { InlineKeyboardMarkup } from "grammy/types";
 
 export async function GET(req: NextRequest) {
   const auth = getAuthFromRequest(req);
@@ -91,9 +92,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const taskKeyboard: InlineKeyboardMarkup = {
+    inline_keyboard: [[
+      { text: "Open Task", url: `https://t.me/e_task_bot/open?startapp=task${task.id}` }
+    ]]
+  };
   await notifyGroup(
     board.telegramChatId,
-    formatNewTask(title, priority || "medium", assigneeUsername, deadlineDate)
+    formatNewTask(title, priority || "medium", assigneeUsername, deadlineDate),
+    taskKeyboard
   );
 
   return NextResponse.json(task, { status: 201 });

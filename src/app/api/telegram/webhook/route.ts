@@ -3,9 +3,10 @@ import { webhookCallback } from "grammy";
 import type { InlineKeyboardMarkup } from "grammy/types";
 import { bot } from "@/lib/telegram/bot";
 import { db } from "@/lib/db";
-import { boards, members } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { boards, members, tasks, comments } from "@/lib/db/schema";
+import { eq, and, like } from "drizzle-orm";
 import { notifyGroup } from "@/lib/telegram/notify";
+import { upsertMember } from "@/lib/db/queries";
 
 // Handle /start command in group or private chat
 bot.command("start", async (ctx) => {
@@ -48,10 +49,23 @@ bot.command("start", async (ctx) => {
           username: admin.user.username || null,
           firstName: admin.user.first_name,
           role: admin.status === "creator" ? "admin" : "member",
-        }).onConflictDoNothing();
+        }).onConflictDoUpdate({
+          target: [members.boardId, members.telegramUserId],
+          set: { username: admin.user.username || null, firstName: admin.user.first_name, leftAt: null },
+        });
       }
     } catch (e) {
-      console.error("Failed to sync members:", e);
+      console.error("Failed to sync admins:", e);
+    }
+
+    // Also sync the user who sent /start (may be a regular member, not an admin)
+    const sender = ctx.from;
+    if (sender && !sender.is_bot) {
+      try {
+        await upsertMember(newBoard.id, BigInt(sender.id), sender.username || null, sender.first_name);
+      } catch (e) {
+        console.error("Failed to sync /start sender as member:", e);
+      }
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;
@@ -100,7 +114,10 @@ bot.on("my_chat_member", async (ctx) => {
           username: admin.user.username || null,
           firstName: admin.user.first_name,
           role: admin.status === "creator" ? "admin" : "member",
-        }).onConflictDoNothing();
+        }).onConflictDoUpdate({
+          target: [members.boardId, members.telegramUserId],
+          set: { username: admin.user.username || null, firstName: admin.user.first_name, leftAt: null },
+        });
       }
     } catch (e) {
       console.error("Failed to sync members:", e);
@@ -142,7 +159,10 @@ bot.on("chat_member", async (ctx) => {
       username: member.user.username || null,
       firstName: member.user.first_name,
       role: "member",
-    }).onConflictDoNothing();
+    }).onConflictDoUpdate({
+      target: [members.boardId, members.telegramUserId],
+      set: { username: member.user.username || null, firstName: member.user.first_name, leftAt: null },
+    });
   }
 
   if (member.status === "left" || member.status === "kicked") {
@@ -154,6 +174,70 @@ bot.on("chat_member", async (ctx) => {
         .set({ leftAt: new Date() })
         .where(eq(members.id, existing[0].id));
     }
+  }
+});
+
+// Handle replies to bot messages as task comments
+bot.on("message:text", async (ctx) => {
+  const reply = ctx.message.reply_to_message;
+  if (!reply || !reply.from?.is_bot) return;
+
+  const chat = ctx.chat;
+  if (chat.type !== "group" && chat.type !== "supergroup") return;
+
+  const sender = ctx.from;
+  if (!sender || sender.is_bot) return;
+
+  // Find the board for this chat
+  const boardResult = await db.select().from(boards)
+    .where(eq(boards.telegramChatId, BigInt(chat.id)))
+    .limit(1);
+  if (boardResult.length === 0) return;
+  const boardRow = boardResult[0];
+
+  // Try to extract a task title from the replied-to message
+  // Our notification format: "<b>New task</b>\n{title}\n● ..." or "... commented on <b>{title}</b>..."
+  const botText = reply.text || "";
+  let matchedTask: typeof tasks.$inferSelect | null = null;
+
+  // Try "New task\n{title}" format first
+  const newTaskMatch = botText.match(/^New task\n(.+)/m);
+  if (newTaskMatch) {
+    const titleCandidate = newTaskMatch[1].trim();
+    const found = await db.select().from(tasks)
+      .where(and(eq(tasks.boardId, boardRow.id), like(tasks.title, titleCandidate)))
+      .limit(1);
+    if (found.length > 0) matchedTask = found[0];
+  }
+
+  // Try "commented on {title}" format
+  if (!matchedTask) {
+    const commentMatch = botText.match(/commented on ([\s\S]+?)\n/);
+    if (commentMatch) {
+      const titleCandidate = commentMatch[1].replace(/<[^>]+>/g, "").trim();
+      const found = await db.select().from(tasks)
+        .where(and(eq(tasks.boardId, boardRow.id), like(tasks.title, titleCandidate)))
+        .limit(1);
+      if (found.length > 0) matchedTask = found[0];
+    }
+  }
+
+  if (!matchedTask) return;
+
+  // Upsert the sender as a member and add the comment
+  try {
+    const authorMember = await upsertMember(boardRow.id, BigInt(sender.id), sender.username || null, sender.first_name);
+    await db.insert(comments).values({
+      taskId: matchedTask.id,
+      authorId: authorMember.id,
+      text: ctx.message.text,
+    });
+    // Confirm with a reply
+    await ctx.reply(`Comment added to "${matchedTask.title}".`, {
+      reply_parameters: { message_id: ctx.message.message_id },
+    });
+  } catch (e) {
+    console.error("Failed to add reply as comment:", e);
   }
 });
 

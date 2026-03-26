@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { useTelegram } from "@/components/telegram-provider";
-import { useTasks, useMembers, useTaskActions } from "@/hooks/use-board";
+import { useTasks, useMembers, useTaskActions, useBoards, useTaskDetail } from "@/hooks/use-board";
 import { TaskCard } from "./task-card";
 import { QuickAdd } from "./quick-add";
 import { FilterChips } from "./filter-chips";
@@ -59,14 +59,42 @@ function BoardPicker({ onSelect }: { onSelect: (chatId: string) => void }) {
   );
 }
 
+function useDeepLinkResolution(openTaskId: string | null) {
+  const { data: taskData } = useTaskDetail(openTaskId);
+  const { data: boardsList } = useBoards();
+  const [resolved, setResolved] = useState<{ chatId: string; taskId: string } | null>(null);
+
+  useEffect(() => {
+    if (!openTaskId || resolved) return;
+    if (!taskData?.task || !boardsList) return;
+    const boardId = taskData.task.boardId;
+    const board = (boardsList as any[]).find((b: any) => b.id === boardId);
+    if (board) {
+      setResolved({ chatId: board.chatId, taskId: openTaskId });
+    }
+  }, [openTaskId, taskData, boardsList, resolved]);
+
+  return resolved;
+}
+
 export function BoardView() {
-  const { chatId: initialChatId, userId, ready } = useTelegram();
+  const { chatId: initialChatId, userId, openTaskId, ready } = useTelegram();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const deepLink = useDeepLinkResolution(openTaskId);
+
+  // When a deep link resolves, auto-select the chat and task
+  useEffect(() => {
+    if (deepLink && !selectedChatId) {
+      setSelectedChatId(deepLink.chatId);
+      setSelectedTaskId(deepLink.taskId);
+    }
+  }, [deepLink, selectedChatId]);
+
   const chatId = selectedChatId || initialChatId;
   const [quickFilter, setQuickFilter] = useState("all");
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, string>>({});
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const apiFilters: Record<string, string> = { ...advancedFilters };
   if (quickFilter === "todo") apiFilters.status = "todo";
@@ -121,10 +149,13 @@ export function BoardView() {
             </div>
           </div>
         </div>
-        <button className="flex h-8 w-8 items-center justify-center rounded-lg text-[14px]"
+        <button
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-[14px]"
           style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
-          onClick={() => setFilterPanelOpen(true)}>
-          &#9776;
+          onClick={() => setSelectedChatId(null)}
+          title="Switch board"
+        >
+          &#8801;
         </button>
       </div>
 
