@@ -2,21 +2,25 @@
 
 import useSWR, { mutate } from "swr";
 import { useTelegram } from "@/components/telegram-provider";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef, useEffect } from "react";
 
+// Use a ref so the fetcher always reads the LATEST initData,
+// not a stale closure value from when SWR first bound the fetcher.
 function useAuthFetcher() {
   const { initData } = useTelegram();
+  const initDataRef = useRef(initData);
+  useEffect(() => { initDataRef.current = initData; }, [initData]);
 
   return useCallback(async (url: string) => {
+    const currentInitData = initDataRef.current;
     const res = await fetch(url, {
-      headers: initData ? { "x-telegram-init-data": initData } : {},
+      headers: currentInitData ? { "x-telegram-init-data": currentInitData } : {},
     });
     if (!res.ok) throw new Error(`API error: ${res.status}`);
     return res.json();
-  }, [initData]);
+  }, []); // stable reference — reads from ref
 }
 
-// Gate: returns true only when we have auth ready
 function useAuthReady() {
   const { initData, ready } = useTelegram();
   return ready && !!initData;
@@ -24,19 +28,22 @@ function useAuthReady() {
 
 function useAuthMutate() {
   const { initData } = useTelegram();
+  const initDataRef = useRef(initData);
+  useEffect(() => { initDataRef.current = initData; }, [initData]);
 
   return useCallback(async (url: string, method: string, body?: object) => {
+    const currentInitData = initDataRef.current;
     const res = await fetch(url, {
       method,
       headers: {
         "Content-Type": "application/json",
-        ...(initData ? { "x-telegram-init-data": initData } : {}),
+        ...(currentInitData ? { "x-telegram-init-data": currentInitData } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
     });
     if (!res.ok) throw new Error(`API error: ${res.status}`);
     return res.json();
-  }, [initData]);
+  }, []); // stable reference
 }
 
 // Silently revalidate without clearing cache — no visual flash
@@ -56,13 +63,18 @@ function revalidateComments() {
   );
 }
 
+const swrOpts = {
+  revalidateOnFocus: false,
+  shouldRetryOnError: true,
+  errorRetryCount: 3,
+  errorRetryInterval: 1000,
+  dedupingInterval: 0,
+};
+
 export function useMembers(chatId: string | null) {
   const fetcher = useAuthFetcher();
   const authReady = useAuthReady();
-  // Only fetch when both chatId AND auth are ready
-  return useSWR(authReady && chatId ? `/api/members?chatId=${chatId}` : null, fetcher, {
-    revalidateOnFocus: false,
-  });
+  return useSWR(authReady && chatId ? `/api/members?chatId=${chatId}` : null, fetcher, swrOpts);
 }
 
 export function useTasks(chatId: string | null, filters?: Record<string, string>) {
@@ -73,37 +85,25 @@ export function useTasks(chatId: string | null, filters?: Record<string, string>
     const params = new URLSearchParams({ chatId, ...filters });
     return `/api/tasks?${params}`;
   }, [authReady, chatId, filters]);
-  return useSWR(key, fetcher, {
-    revalidateOnFocus: false,
-    keepPreviousData: true,
-  });
+  return useSWR(key, fetcher, { ...swrOpts, keepPreviousData: true });
 }
 
 export function useTaskDetail(taskId: string | null) {
   const fetcher = useAuthFetcher();
   const authReady = useAuthReady();
-  return useSWR(authReady && taskId ? `/api/tasks/${taskId}` : null, fetcher, {
-    revalidateOnFocus: false,
-    keepPreviousData: true,
-  });
+  return useSWR(authReady && taskId ? `/api/tasks/${taskId}` : null, fetcher, { ...swrOpts, keepPreviousData: true });
 }
 
 export function useComments(taskId: string | null) {
   const fetcher = useAuthFetcher();
   const authReady = useAuthReady();
-  return useSWR(authReady && taskId ? `/api/comments?taskId=${taskId}` : null, fetcher, {
-    revalidateOnFocus: false,
-    keepPreviousData: true,
-  });
+  return useSWR(authReady && taskId ? `/api/comments?taskId=${taskId}` : null, fetcher, { ...swrOpts, keepPreviousData: true });
 }
 
 export function useBoards() {
   const fetcher = useAuthFetcher();
   const authReady = useAuthReady();
-  // Only fetch when auth is ready — prevents 401 on initial load
-  return useSWR(authReady ? "/api/boards" : null, fetcher, {
-    revalidateOnFocus: false,
-  });
+  return useSWR(authReady ? "/api/boards" : null, fetcher, swrOpts);
 }
 
 export function useTaskActions(chatId: string | null) {
