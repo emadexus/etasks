@@ -24,7 +24,7 @@ bot.command("start", async (ctx) => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;
     const keyboard: InlineKeyboardMarkup = {
       inline_keyboard: [[
-        { text: "Open Task Board", web_app: { url: `${appUrl}?chatId=${chat.id}` } }
+        { text: "Open Task Board", url: `https://t.me/e_task_bot/open?startapp=chat${chat.id.toString().replace("-", "n")}` }
       ]]
     };
     await ctx.reply(`Task board is ready for <b>${chat.title}</b>!`, {
@@ -57,7 +57,7 @@ bot.command("start", async (ctx) => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;
     const keyboard: InlineKeyboardMarkup = {
       inline_keyboard: [[
-        { text: "Open Task Board", web_app: { url: `${appUrl}?chatId=${chat.id}` } }
+        { text: "Open Task Board", url: `https://t.me/e_task_bot/open?startapp=chat${chat.id.toString().replace("-", "n")}` }
       ]]
     };
     await ctx.reply(
@@ -109,7 +109,7 @@ bot.on("my_chat_member", async (ctx) => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;
     const keyboard: InlineKeyboardMarkup = {
       inline_keyboard: [[
-        { text: "Open Task Board", web_app: { url: `${appUrl}?chatId=${chat.id}` } }
+        { text: "Open Task Board", url: `https://t.me/e_task_bot/open?startapp=chat${chat.id.toString().replace("-", "n")}` }
       ]]
     };
     await notifyGroup(BigInt(chat.id),

@@ -35,7 +35,14 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
       if (tg) {
         tg.ready();
         const initDataRaw = tg.initData || null;
-        const chatId = tg.initDataUnsafe?.start_param || new URLSearchParams(window.location.search).get("chatId");
+        let chatId = new URLSearchParams(window.location.search).get("chatId");
+        const startParam = tg.initDataUnsafe?.start_param;
+        if (startParam && startParam.startsWith("chat")) {
+          // Decode: "chatn4929114614" -> "-4929114614"
+          chatId = startParam.slice(4).replace("n", "-");
+        } else if (startParam) {
+          chatId = startParam;
+        }
         const userId = tg.initDataUnsafe?.user?.id?.toString() || null;
 
         setCtx({ initData: initDataRaw, chatId, userId, ready: true });
