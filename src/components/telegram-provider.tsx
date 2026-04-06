@@ -56,15 +56,18 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         console.log("[TG] chatId:", chatId, "userId:", userId, "openTaskId:", openTaskId);
         setCtx({ initData: initDataRaw, chatId, userId, openTaskId, ready: true });
       } else {
-        console.log("[TG] No Telegram WebApp global found");
-        // Dev fallback
-        const chatId = new URLSearchParams(window.location.search).get("chatId");
-        setCtx({ initData: null, chatId, userId: null, openTaskId: null, ready: true });
+        console.log("[TG] No Telegram WebApp global found — using dev fallback");
+        // Dev fallback: use query params or defaults
+        const params = new URLSearchParams(window.location.search);
+        const chatId = params.get("chatId") || "-4929114614";
+        const userId = "247463948";
+        setCtx({ initData: "dev", chatId, userId, openTaskId: null, ready: true });
       }
     } catch (e) {
       console.warn("Not in Telegram Mini App context:", e);
-      const chatId = new URLSearchParams(window.location.search).get("chatId");
-      setCtx({ initData: null, chatId, userId: null, openTaskId: null, ready: true });
+      const params = new URLSearchParams(window.location.search);
+      const chatId = params.get("chatId") || "-4929114614";
+      setCtx({ initData: "dev", chatId, userId: "247463948", openTaskId: null, ready: true });
     }
   }, []);
 

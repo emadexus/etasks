@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthFromRequest } from "@/lib/telegram/auth";
+import { getAuthUser } from "@/lib/telegram/auth";
 import { db } from "@/lib/db";
-import { tasks, taskReminders } from "@/lib/db/schema";
+import { tasks, taskReminders, comments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getTaskWithDetails, getMemberByTelegramId, getRemindersForTask } from "@/lib/db/queries";
 import { cancelReminders, scheduleReminders, toggleReminder } from "@/lib/qstash/reminders";
+import { createNextRecurrence } from "@/lib/recurrence";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const auth = getAuthFromRequest(req);
+  const auth = await getAuthUser(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const result = await getTaskWithDetails(id);
@@ -16,7 +17,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const reminders = await getRemindersForTask(id);
 
-  // Convert BigInt fields for JSON serialization
   return NextResponse.json({
     task: result.task,
     assignee: result.assignee ? {
@@ -29,20 +29,27 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const auth = getAuthFromRequest(req);
+  const auth = await getAuthUser(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const result = await getTaskWithDetails(id);
   if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const task = result.task;
-  const member = await getMemberByTelegramId(task.boardId, auth.userId);
-  if (!member) return NextResponse.json({ error: "Not a member" }, { status: 403 });
 
-  const isCreator = task.createdBy === member.id;
-  const isAdmin = member.role === "admin";
-  if (!isCreator && !isAdmin) {
-    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+  // Authorization: personal task → check ownerId; board task → check membership
+  if (task.boardId) {
+    const member = await getMemberByTelegramId(task.boardId, auth.userId);
+    if (!member) return NextResponse.json({ error: "Not a member" }, { status: 403 });
+    const isCreator = task.createdBy === member.id;
+    const isAdmin = member.role === "admin";
+    if (!isCreator && !isAdmin) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+    }
+  } else {
+    if (task.ownerId !== auth.dbUserId) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+    }
   }
 
   const body = await req.json();
@@ -53,7 +60,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.status !== undefined) updates.status = body.status;
   if (body.priority !== undefined) updates.priority = body.priority;
   if (body.assigneeId !== undefined) updates.assigneeId = body.assigneeId;
-  if (body.deadline !== undefined) updates.deadline = new Date(body.deadline);
+  if (body.dateDue !== undefined) updates.dateDue = body.dateDue ? new Date(body.dateDue) : null;
+  if (body.datePlanned !== undefined) updates.datePlanned = body.datePlanned ? new Date(body.datePlanned) : null;
+  if (body.notifyAt !== undefined) updates.notifyAt = body.notifyAt ? new Date(body.notifyAt) : null;
+  if (body.recurrenceRule !== undefined) updates.recurrenceRule = body.recurrenceRule;
+  if (body.projectId !== undefined) updates.projectId = body.projectId || null;
+
+  if (body.status === "done") {
+    updates.completedAt = new Date();
+  } else if (body.status && body.status !== "done" && task.status === "done") {
+    updates.completedAt = null;
+  }
+
   updates.updatedAt = new Date();
 
   const [updated] = await db.update(tasks)
@@ -61,26 +79,36 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .where(eq(tasks.id, id))
     .returning();
 
-  if (body.deadline) {
+  // Handle deadline/dateDue changes
+  if (body.dateDue !== undefined) {
     await cancelReminders(id);
-    const existingReminders = await getRemindersForTask(id);
-    const activeOffsets = existingReminders
-      .filter(r => !r.sent)
-      .map(r => r.offsetLabel);
-    if (activeOffsets.length > 0) {
-      await scheduleReminders(id, new Date(body.deadline), activeOffsets);
+    if (body.dateDue) {
+      const existingReminders = await getRemindersForTask(id);
+      const activeOffsets = existingReminders
+        .filter(r => !r.sent)
+        .map(r => r.offsetLabel);
+      if (activeOffsets.length > 0) {
+        await scheduleReminders(id, new Date(body.dateDue), activeOffsets);
+      }
     }
   }
 
   if (body.status === "done") {
     await cancelReminders(id);
+
+    // Handle recurrence: create next task instance
+    if (task.recurrenceRule) {
+      await createNextRecurrence(task);
+    }
   }
 
   // Handle reminder toggles: { reminders: { "1h": true, "7d": false } }
   if (body.reminders) {
-    const taskDeadline = body.deadline ? new Date(body.deadline) : result.task.deadline;
-    for (const [offset, enabled] of Object.entries(body.reminders)) {
-      await toggleReminder(id, offset, taskDeadline, enabled as boolean);
+    const taskDeadline = body.dateDue ? new Date(body.dateDue) : task.dateDue;
+    if (taskDeadline) {
+      for (const [offset, enabled] of Object.entries(body.reminders)) {
+        await toggleReminder(id, offset, taskDeadline, enabled as boolean);
+      }
     }
   }
 
@@ -89,24 +117,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const auth = getAuthFromRequest(req);
+  const auth = await getAuthUser(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const result = await getTaskWithDetails(id);
   if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const member = await getMemberByTelegramId(result.task.boardId, auth.userId);
-  if (!member) return NextResponse.json({ error: "Not a member" }, { status: 403 });
-
-  const isCreator = result.task.createdBy === member.id;
-  const isAdmin = member.role === "admin";
-  if (!isCreator && !isAdmin) {
-    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+  // Authorization: personal task → check ownerId; board task → check membership
+  if (result.task.boardId) {
+    const member = await getMemberByTelegramId(result.task.boardId, auth.userId);
+    if (!member) return NextResponse.json({ error: "Not a member" }, { status: 403 });
+    const isCreator = result.task.createdBy === member.id;
+    const isAdmin = member.role === "admin";
+    if (!isCreator && !isAdmin) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+    }
+  } else {
+    if (result.task.ownerId !== auth.dbUserId) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+    }
   }
 
   await cancelReminders(id);
   await db.delete(taskReminders).where(eq(taskReminders.taskId, id));
-  const { comments } = await import("@/lib/db/schema");
   await db.delete(comments).where(eq(comments.taskId, id));
   await db.delete(tasks).where(eq(tasks.id, id));
 

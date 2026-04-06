@@ -1,5 +1,5 @@
-import { BoardView } from "@/components/board-view";
+import { HomeScreen } from "@/components/home-screen";
 
 export default function Home() {
-  return <BoardView />;
+  return <HomeScreen />;
 }

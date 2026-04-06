@@ -49,7 +49,7 @@ function useAuthMutate() {
 // Silently revalidate without clearing cache — no visual flash
 function revalidateTasks() {
   mutate(
-    (key: unknown) => typeof key === "string" && key.startsWith("/api/tasks"),
+    (key: unknown) => typeof key === "string" && (key.startsWith("/api/tasks") || key.startsWith("/api/user/tasks") || key.startsWith("/api/user/counts")),
     undefined,
     { revalidate: true, populateCache: false }
   );
@@ -63,6 +63,14 @@ function revalidateComments() {
   );
 }
 
+function revalidateProjects() {
+  mutate(
+    (key: unknown) => typeof key === "string" && key.startsWith("/api/projects"),
+    undefined,
+    { revalidate: true, populateCache: false }
+  );
+}
+
 const swrOpts = {
   revalidateOnFocus: false,
   shouldRetryOnError: true,
@@ -70,6 +78,8 @@ const swrOpts = {
   errorRetryInterval: 1000,
   dedupingInterval: 0,
 };
+
+// ─── Existing board-scoped hooks ───
 
 export function useMembers(chatId: string | null) {
   const fetcher = useAuthFetcher();
@@ -110,8 +120,8 @@ export function useTaskActions(chatId: string | null) {
   const api = useAuthMutate();
 
   return useMemo(() => ({
-    createTask: async (data: { title: string; description?: string; priority?: string; assigneeId?: string; deadline?: string }) => {
-      const result = await api("/api/tasks", "POST", { ...data, chatId });
+    createTask: async (data: { title: string; description?: string; priority?: string; assigneeId?: string; dateDue?: string; chatId?: string; projectId?: string; datePlanned?: string; notifyAt?: string; recurrenceRule?: string }) => {
+      const result = await api("/api/tasks", "POST", { ...data, chatId: data.chatId || chatId });
       revalidateTasks();
       return result;
     },
@@ -131,4 +141,58 @@ export function useTaskActions(chatId: string | null) {
       return result;
     },
   }), [api, chatId]);
+}
+
+// ─── New user-centric hooks ───
+
+export function useUser() {
+  const fetcher = useAuthFetcher();
+  const authReady = useAuthReady();
+  return useSWR(authReady ? "/api/user" : null, fetcher, swrOpts);
+}
+
+export function useSmartFilterCounts() {
+  const fetcher = useAuthFetcher();
+  const authReady = useAuthReady();
+  return useSWR(authReady ? "/api/user/counts" : null, fetcher, swrOpts);
+}
+
+export function useFilteredTasks(filter: string, projectId?: string, chatId?: string) {
+  const fetcher = useAuthFetcher();
+  const authReady = useAuthReady();
+  const key = useMemo(() => {
+    if (!authReady || !filter) return null;
+    const params = new URLSearchParams({ filter });
+    if (projectId) params.set("projectId", projectId);
+    if (chatId) params.set("chatId", chatId);
+    return `/api/user/tasks?${params}`;
+  }, [authReady, filter, projectId, chatId]);
+  return useSWR(key, fetcher, { ...swrOpts, keepPreviousData: true });
+}
+
+export function useProjects() {
+  const fetcher = useAuthFetcher();
+  const authReady = useAuthReady();
+  return useSWR(authReady ? "/api/projects" : null, fetcher, swrOpts);
+}
+
+export function useProjectActions() {
+  const api = useAuthMutate();
+
+  return useMemo(() => ({
+    createProject: async (data: { name: string; color?: string; icon?: string }) => {
+      const result = await api("/api/projects", "POST", data);
+      revalidateProjects();
+      return result;
+    },
+    updateProject: async (id: string, data: object) => {
+      const result = await api(`/api/projects/${id}`, "PATCH", data);
+      revalidateProjects();
+      return result;
+    },
+    deleteProject: async (id: string) => {
+      await api(`/api/projects/${id}`, "DELETE");
+      revalidateProjects();
+    },
+  }), [api]);
 }

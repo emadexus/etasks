@@ -25,14 +25,22 @@ export function QuickAdd({ onAdd }: QuickAddProps) {
   };
 
   return (
-    <div className="flex items-center gap-2 rounded-[10px] border border-dashed px-3.5 py-2.5"
-      style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}>
+    <div
+      className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5"
+      style={{ background: "var(--bg-card)" }}
+    >
       <button
         onClick={handleSubmit}
         disabled={loading || !value.trim()}
-        style={{ color: value.trim() ? "var(--accent-blue)" : "var(--text-muted)" }}
-        className="text-[16px] font-medium transition-colors"
-      >+</button>
+        className="flex h-[22px] w-[22px] items-center justify-center rounded-full text-[14px] font-bold transition-colors"
+        style={{
+          color: value.trim() ? "#fff" : "var(--text-dim)",
+          background: value.trim() ? "var(--accent-green)" : "transparent",
+          border: value.trim() ? "none" : "1.5px solid var(--text-dim)",
+        }}
+      >
+        +
+      </button>
       <input
         ref={inputRef}
         className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-[var(--text-dim)]"

@@ -19,7 +19,7 @@ async function handler(req: NextRequest) {
     board: boards,
   })
     .from(tasks)
-    .innerJoin(boards, eq(tasks.boardId, boards.id))
+    .leftJoin(boards, eq(tasks.boardId, boards.id))
     .leftJoin(members, eq(tasks.assigneeId, members.id))
     .where(eq(tasks.id, taskId))
     .limit(1);
@@ -38,7 +38,11 @@ async function handler(req: NextRequest) {
     .set({ sent: true })
     .where(eq(taskReminders.id, reminderId));
 
-  const msLeft = task.deadline.getTime() - Date.now();
+  if (!task.dateDue) {
+    return NextResponse.json({ ok: true, skipped: "no due date" });
+  }
+
+  const msLeft = task.dateDue.getTime() - Date.now();
   const hoursLeft = Math.max(0, Math.round(msLeft / (60 * 60 * 1000)));
   const timeLeft = hoursLeft >= 24
     ? `${Math.round(hoursLeft / 24)}d`
@@ -50,7 +54,9 @@ async function handler(req: NextRequest) {
     assignee?.username || null,
   );
 
-  await notifyGroup(board.telegramChatId, message);
+  if (board) {
+    await notifyGroup(board.telegramChatId, message);
+  }
 
   if (assignee) {
     await notifyUser(assignee.telegramUserId, message);

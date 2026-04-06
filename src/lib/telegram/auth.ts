@@ -1,4 +1,5 @@
 import { createHmac } from "crypto";
+import { getOrCreateUser } from "@/lib/db/queries";
 
 export function validateInitData(initData: string): { userId: bigint; username: string | null; firstName: string } | null {
   const params = new URLSearchParams(initData);
@@ -35,6 +36,14 @@ export function validateInitData(initData: string): { userId: bigint; username: 
 export function getAuthFromRequest(req: Request) {
   const initData = req.headers.get("x-telegram-init-data");
   if (!initData) {
+    // Dev bypass: return a fake user in development mode
+    if (process.env.NODE_ENV === "development") {
+      return {
+        userId: BigInt(process.env.DEV_TELEGRAM_USER_ID || "247463948"),
+        username: process.env.DEV_TELEGRAM_USERNAME || "dev_user",
+        firstName: process.env.DEV_TELEGRAM_FIRST_NAME || "Dev",
+      };
+    }
     console.warn("No x-telegram-init-data header");
     return null;
   }
@@ -43,4 +52,13 @@ export function getAuthFromRequest(req: Request) {
     console.warn("initData validation failed");
   }
   return result;
+}
+
+/** Resolves Telegram auth + ensures a users table record exists. */
+export async function getAuthUser(req: Request) {
+  const auth = getAuthFromRequest(req);
+  if (!auth) return null;
+
+  const user = await getOrCreateUser(auth.userId, auth.username, auth.firstName);
+  return { ...auth, dbUserId: user.id };
 }

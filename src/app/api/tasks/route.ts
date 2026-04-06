@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthFromRequest } from "@/lib/telegram/auth";
+import { getAuthFromRequest, getAuthUser } from "@/lib/telegram/auth";
 import { getBoardByChatId, getMemberByTelegramId, upsertMember } from "@/lib/db/queries";
 import { db } from "@/lib/db";
 import { tasks, members, comments } from "@/lib/db/schema";
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   if (priority) conditions.push(eq(tasks.priority, priority as any));
   if (assigneeId) conditions.push(eq(tasks.assigneeId, assigneeId));
 
-  const orderBy = sortBy === "deadline" ? asc(tasks.deadline)
+  const orderBy = sortBy === "deadline" ? asc(tasks.dateDue)
     : sortBy === "priority" ? desc(tasks.priority)
     : desc(tasks.createdAt);
 
@@ -54,54 +54,83 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = getAuthFromRequest(req);
+  const auth = await getAuthUser(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { chatId, title, description, priority, assigneeId, deadline } = body;
+  const { chatId, title, description, priority, assigneeId, dateDue, datePlanned, projectId, notifyAt, recurrenceRule } = body;
 
-  if (!chatId || !title) {
-    return NextResponse.json({ error: "chatId and title required" }, { status: 400 });
+  if (!title) {
+    return NextResponse.json({ error: "title required" }, { status: 400 });
   }
 
-  const board = await getBoardByChatId(BigInt(chatId));
-  if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
+  // Board task (group) vs personal/project task
+  if (chatId) {
+    const board = await getBoardByChatId(BigInt(chatId));
+    if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
 
-  const member = await upsertMember(board.id, auth.userId, auth.username, auth.firstName);
+    const member = await upsertMember(board.id, auth.userId, auth.username, auth.firstName);
 
-  const deadlineDate = deadline ? new Date(deadline) : new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const dueDate = dateDue ? new Date(dateDue) : new Date(Date.now() + 24 * 60 * 60 * 1000);
 
+    const [task] = await db.insert(tasks).values({
+      boardId: board.id,
+      ownerId: auth.dbUserId,
+      title,
+      description: description || null,
+      priority: priority || "medium",
+      assigneeId: assigneeId || null,
+      createdBy: member.id,
+      dateDue: dueDate,
+      datePlanned: datePlanned ? new Date(datePlanned) : null,
+      notifyAt: notifyAt ? new Date(notifyAt) : null,
+      recurrenceRule: recurrenceRule || null,
+    }).returning();
+
+    await scheduleReminders(task.id, dueDate, ["24h"]);
+
+    let assigneeUsername: string | null = null;
+    if (assigneeId) {
+      const assignee = await db.select().from(members).where(eq(members.id, assigneeId)).limit(1);
+      if (assignee[0]) {
+        assigneeUsername = assignee[0].username;
+        await notifyUser(assignee[0].telegramUserId, formatNewTask(title, priority || "medium", assigneeUsername, dueDate));
+      }
+    }
+
+    const taskKeyboard: InlineKeyboardMarkup = {
+      inline_keyboard: [[
+        { text: "Open Task", url: `https://t.me/e_task_bot/open?startapp=task${task.id}` }
+      ]]
+    };
+    await notifyGroup(
+      board.telegramChatId,
+      formatNewTask(title, priority || "medium", assigneeUsername, dueDate),
+      taskKeyboard
+    );
+
+    return NextResponse.json(task, { status: 201 });
+  }
+
+  // Personal or project task
   const [task] = await db.insert(tasks).values({
-    boardId: board.id,
+    boardId: null,
+    ownerId: auth.dbUserId,
+    projectId: projectId || null,
     title,
     description: description || null,
     priority: priority || "medium",
-    assigneeId: assigneeId || null,
-    createdBy: member.id,
-    deadline: deadlineDate,
+    assigneeId: null,
+    createdBy: null,
+    dateDue: dateDue ? new Date(dateDue) : null,
+    datePlanned: datePlanned ? new Date(datePlanned) : null,
+    notifyAt: notifyAt ? new Date(notifyAt) : null,
+    recurrenceRule: recurrenceRule || null,
   }).returning();
 
-  await scheduleReminders(task.id, deadlineDate, ["24h"]);
-
-  let assigneeUsername: string | null = null;
-  if (assigneeId) {
-    const assignee = await db.select().from(members).where(eq(members.id, assigneeId)).limit(1);
-    if (assignee[0]) {
-      assigneeUsername = assignee[0].username;
-      await notifyUser(assignee[0].telegramUserId, formatNewTask(title, priority || "medium", assigneeUsername, deadlineDate));
-    }
+  if (dateDue) {
+    await scheduleReminders(task.id, new Date(dateDue), ["24h"]);
   }
-
-  const taskKeyboard: InlineKeyboardMarkup = {
-    inline_keyboard: [[
-      { text: "Open Task", url: `https://t.me/e_task_bot/open?startapp=task${task.id}` }
-    ]]
-  };
-  await notifyGroup(
-    board.telegramChatId,
-    formatNewTask(title, priority || "medium", assigneeUsername, deadlineDate),
-    taskKeyboard
-  );
 
   return NextResponse.json(task, { status: 201 });
 }

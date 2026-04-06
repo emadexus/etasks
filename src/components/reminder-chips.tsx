@@ -15,10 +15,10 @@ export function ReminderChips({ activeOffsets, onToggle }: ReminderChipsProps) {
         {PRESETS.map((p) => {
           const active = activeOffsets.includes(p);
           return (
-            <button key={p} className="rounded-[5px] px-2 py-0.5 text-[10px] transition-colors"
+            <button key={p} className="rounded-md px-2.5 py-1 text-[10px] font-medium transition-colors"
               style={{
-                background: active ? "var(--accent-blue-bg)" : "rgba(255,255,255,0.03)",
-                color: active ? "var(--accent-blue)" : "var(--text-muted)",
+                background: active ? "var(--accent-purple-bg)" : "var(--bg-card)",
+                color: active ? "var(--accent-purple)" : "var(--text-muted)",
               }}
               onClick={() => onToggle(p, !active)}>
               {p}

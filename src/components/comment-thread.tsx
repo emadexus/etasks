@@ -42,7 +42,7 @@ export function CommentThread({ comments, onAdd }: CommentThreadProps) {
       )}
       <div className="flex max-h-48 flex-col gap-1.5 overflow-y-auto">
         {comments.map((c) => (
-          <div key={c.comment.id} className="rounded-lg p-2" style={{ background: "rgba(255,255,255,0.02)" }}>
+          <div key={c.comment.id} className="rounded-lg p-2.5" style={{ background: "var(--bg-card)" }}>
             <div className="text-[11px]">
               <span className="font-medium">{c.author.firstName}</span>
               <span className="ml-1.5" style={{ color: "var(--text-dim)", fontSize: "10px" }}>
@@ -56,14 +56,14 @@ export function CommentThread({ comments, onAdd }: CommentThreadProps) {
         ))}
       </div>
       <div className="mt-2 flex gap-2">
-        <input className="flex-1 rounded-lg bg-transparent px-2.5 py-2 text-[11px] outline-none"
-          style={{ background: "rgba(255,255,255,0.03)", color: "var(--text-primary)" }}
+        <input className="flex-1 rounded-lg bg-transparent px-2.5 py-2 text-[12px] outline-none"
+          style={{ background: "var(--bg-card)", color: "var(--text-primary)" }}
           placeholder="Add a comment..." value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           disabled={loading} />
         <button className="flex h-8 w-8 items-center justify-center rounded-lg text-[14px] text-white"
-          style={{ background: "var(--accent-blue)" }} onClick={handleSend} disabled={loading}>
+          style={{ background: "var(--accent-purple)" }} onClick={handleSend} disabled={loading}>
           ↑
         </button>
       </div>

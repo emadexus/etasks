@@ -1,5 +1,13 @@
 import { pgTable, uuid, text, timestamp, bigint, boolean, unique } from "drizzle-orm/pg-core";
 
+export const users = pgTable("users", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  telegramUserId: bigint("telegram_user_id", { mode: "bigint" }).notNull().unique(),
+  username: text("username"),
+  firstName: text("first_name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const boards = pgTable("boards", {
   id: uuid("id").defaultRandom().primaryKey(),
   telegramChatId: bigint("telegram_chat_id", { mode: "bigint" }).notNull().unique(),
@@ -20,16 +28,32 @@ export const members = pgTable("members", {
   uniqueMember: unique().on(table.boardId, table.telegramUserId),
 }));
 
+export const projects = pgTable("projects", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  ownerId: uuid("owner_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  color: text("color"),
+  icon: text("icon"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  archivedAt: timestamp("archived_at"),
+});
+
 export const tasks = pgTable("tasks", {
   id: uuid("id").defaultRandom().primaryKey(),
-  boardId: uuid("board_id").notNull().references(() => boards.id),
+  boardId: uuid("board_id").references(() => boards.id),
+  ownerId: uuid("owner_id").notNull().references(() => users.id),
+  projectId: uuid("project_id").references(() => projects.id),
   title: text("title").notNull(),
   description: text("description"),
   status: text("status", { enum: ["todo", "in_progress", "done"] }).notNull().default("todo"),
   priority: text("priority", { enum: ["low", "medium", "high"] }).notNull().default("medium"),
   assigneeId: uuid("assignee_id").references(() => members.id),
-  createdBy: uuid("created_by").notNull().references(() => members.id),
-  deadline: timestamp("deadline").notNull(),
+  createdBy: uuid("created_by").references(() => members.id),
+  dateDue: timestamp("date_due"),
+  datePlanned: timestamp("date_planned"),
+  notifyAt: timestamp("notify_at"),
+  recurrenceRule: text("recurrence_rule"),
+  completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
