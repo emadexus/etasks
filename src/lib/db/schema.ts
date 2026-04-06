@@ -13,6 +13,7 @@ export const boards = pgTable("boards", {
   telegramChatId: bigint("telegram_chat_id", { mode: "bigint" }).notNull().unique(),
   name: text("name").notNull(),
   language: text("language").notNull().default("en"),
+  photoUrl: text("photo_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

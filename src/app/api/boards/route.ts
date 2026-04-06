@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
       id: r.board.id,
       name: r.board.name,
       chatId: r.board.telegramChatId.toString(),
+      photoUrl: r.board.photoUrl || null,
     }))
   );
 }

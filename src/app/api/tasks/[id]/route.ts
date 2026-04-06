@@ -66,6 +66,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.recurrenceRule !== undefined) updates.recurrenceRule = body.recurrenceRule;
   if (body.projectId !== undefined) updates.projectId = body.projectId || null;
 
+  // Move task to a different board (or to personal inbox with boardId=null)
+  if (body.boardId !== undefined) {
+    if (body.boardId === null) {
+      updates.boardId = null;
+      updates.assigneeId = null;
+      updates.createdBy = null;
+    } else if (body.boardId !== task.boardId) {
+      updates.boardId = body.boardId;
+      updates.assigneeId = null;
+      updates.createdBy = null;
+      updates.projectId = null;
+    }
+  }
+
   if (body.status === "done") {
     updates.completedAt = new Date();
   } else if (body.status && body.status !== "done" && task.status === "done") {

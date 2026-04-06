@@ -7,6 +7,7 @@ import { boards, members, tasks, comments } from "@/lib/db/schema";
 import { eq, and, like } from "drizzle-orm";
 import { notifyGroup, botT } from "@/lib/telegram/notify";
 import { upsertMember } from "@/lib/db/queries";
+import { uploadFile } from "@/lib/storage/spaces";
 
 const YETI_AVATAR_URL = "https://ooih.fra1.digitaloceanspaces.com/etasks/yeti_avatar.png";
 
@@ -18,6 +19,25 @@ async function trySetChatPhoto(chatId: number | bigint) {
     await bot.api.setChatPhoto(Number(chatId), new InputFile(buffer, "yeti.png"));
   } catch (e) {
     console.log("setChatPhoto failed (bot may not be admin):", (e as Error).message);
+  }
+}
+
+/** Fetch group photo from Telegram, upload to DO Spaces, update board record. */
+async function syncGroupPhoto(chatId: number | bigint, boardId: string) {
+  try {
+    const chat = await bot.api.getChat(Number(chatId));
+    if (!("photo" in chat) || !chat.photo) return;
+    const file = await bot.api.getFile(chat.photo.big_file_id);
+    if (!file.file_path) return;
+    const token = process.env.TG_BOT_TOKEN || "";
+    const url = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+    const resp = await fetch(url);
+    if (!resp.ok) return;
+    const buffer = Buffer.from(await resp.arrayBuffer());
+    const { url: cdnUrl } = await uploadFile(buffer, `group_${chatId}.jpg`, "image/jpeg");
+    await db.update(boards).set({ photoUrl: cdnUrl }).where(eq(boards.id, boardId));
+  } catch (e) {
+    console.log("syncGroupPhoto failed:", (e as Error).message);
   }
 }
 
@@ -43,6 +63,8 @@ bot.command("start", async (ctx) => {
     .limit(1);
 
   if (existing.length > 0) {
+    // Refresh group photo in background
+    syncGroupPhoto(chat.id, existing[0].id);
     const lang = existing[0].language || "en";
     const langHint = lang === "ru"
       ? "\n\n🌐 Язык: Русский (смените: /lang en)"
@@ -87,6 +109,8 @@ bot.command("start", async (ctx) => {
 
     // Try to set group photo to Yeti avatar
     await trySetChatPhoto(chat.id);
+    // Sync group photo to app (in background)
+    syncGroupPhoto(chat.id, newBoard.id);
 
     const lang = newBoard.language || "en";
     const langHint = lang === "ru"
@@ -200,6 +224,8 @@ bot.on("my_chat_member", async (ctx) => {
 
     // Try to set group photo to Yeti avatar
     await trySetChatPhoto(chat.id);
+    // Sync group photo to app
+    syncGroupPhoto(chat.id, boardId);
 
     await notifyGroup(BigInt(chat.id),
       `${botT("boardCreated", lang)} <b>${chat.title}</b> ✨\n${botT("startPrivate", lang)}`,

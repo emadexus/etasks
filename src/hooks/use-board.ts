@@ -71,6 +71,14 @@ function revalidateProjects() {
   );
 }
 
+function revalidateHome() {
+  mutate(
+    (key: unknown) => typeof key === "string" && key.startsWith("/api/home"),
+    undefined,
+    { revalidate: true, populateCache: false }
+  );
+}
+
 function revalidateAttachments() {
   mutate(
     (key: unknown) => typeof key === "string" && key.startsWith("/api/attachments"),
@@ -146,6 +154,13 @@ export function useTaskActions(chatId: string | null) {
     addComment: async (taskId: string, text: string) => {
       const result = await api("/api/comments", "POST", { taskId, text });
       revalidateComments();
+      return result;
+    },
+    moveTask: async (id: string, boardId: string | null) => {
+      const result = await api(`/api/tasks/${id}`, "PATCH", { boardId });
+      revalidateTasks();
+      revalidateHome();
+      mutate(`/api/tasks/${id}`);
       return result;
     },
   }), [api, chatId]);

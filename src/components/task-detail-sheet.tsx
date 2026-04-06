@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useTaskDetail, useComments, useTaskActions, useMembers, useAttachments, useAttachmentActions } from "@/hooks/use-board";
+import { useTaskDetail, useComments, useTaskActions, useMembers, useAttachments, useAttachmentActions, useHome } from "@/hooks/use-board";
 import { useTelegram } from "./telegram-provider";
 import { CommentThread } from "./comment-thread";
 import { ReminderChips } from "./reminder-chips";
@@ -98,6 +98,72 @@ function AssigneePicker({ assignee, members, onChange }: {
   );
 }
 
+function BoardPicker({ currentBoardId, boards, onMove }: {
+  currentBoardId: string | null;
+  boards: { id: string; name: string; chatId: string }[];
+  onMove: (boardId: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const currentLabel = currentBoardId
+    ? boards.find(b => b.id === currentBoardId)?.name || "?"
+    : t("personalInbox");
+
+  return (
+    <span className="relative inline-block">
+      <span
+        className="cursor-pointer rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors active:opacity-70"
+        style={{ color: "var(--accent-orange)", background: "var(--accent-orange)18" }}
+        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+      >
+        {currentLabel} ›
+      </span>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-[55]" onClick={() => setOpen(false)} />
+          <div
+            className="absolute left-0 top-full z-[60] mt-1 min-w-[180px] overflow-hidden rounded-xl p-1 shadow-xl"
+            style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-card)" }}
+          >
+            {/* Personal inbox option */}
+            {currentBoardId !== null && (
+              <button
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-[12px] transition-colors active:bg-white/5"
+                style={{ color: "var(--text-primary)" }}
+                onClick={(e) => { e.stopPropagation(); onMove(null); setOpen(false); }}
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded text-[10px]" style={{ background: "var(--accent-orange)", color: "#fff" }}>▣</span>
+                {t("personalInbox")}
+              </button>
+            )}
+            {/* Board options */}
+            {boards
+              .filter(b => b.id !== currentBoardId)
+              .map((b) => (
+                <button
+                  key={b.id}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-[12px] transition-colors active:bg-white/5"
+                  style={{ color: "var(--text-primary)" }}
+                  onClick={(e) => { e.stopPropagation(); onMove(b.id); setOpen(false); }}
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded text-[10px] font-semibold" style={{ background: "var(--accent-blue)", color: "#fff" }}>
+                    {b.name[0].toUpperCase()}
+                  </span>
+                  {b.name}
+                </button>
+              ))}
+            {boards.length === 0 && currentBoardId === null && (
+              <div className="px-3 py-2 text-[11px]" style={{ color: "var(--text-dim)" }}>
+                {t("noTasksYet")}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </span>
+  );
+}
+
 function formatDate(d: Date | null, lang: string = "en"): string {
   if (!d) return t("notSet");
   const locale = lang === "ru" ? "ru-RU" : "en-US";
@@ -108,9 +174,10 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
   const { data: taskData, mutate: mutateTask } = useTaskDetail(taskId);
   const { data: commentsData, mutate: mutateComments } = useComments(taskId);
   const { data: membersData } = useMembers(chatId);
-  const { updateTask, addComment } = useTaskActions(chatId);
+  const { updateTask, addComment, moveTask } = useTaskActions(chatId);
   const { data: attachmentsData, mutate: mutateAttachments } = useAttachments(taskId);
   const { uploadFile } = useAttachmentActions();
+  const { data: homeData } = useHome();
   const { lang } = useTelegram();
 
   const [localTask, setLocalTask] = useState<any>(null);
@@ -209,6 +276,15 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
                 onChange={(id) => handleUpdate("assigneeId", id)}
               />
             )}
+            <BoardPicker
+              currentBoardId={task.boardId}
+              boards={homeData?.boards || []}
+              onMove={async (newBoardId) => {
+                await moveTask(task.id, newBoardId);
+                mutateTask();
+                onClose();
+              }}
+            />
           </div>
 
           <button

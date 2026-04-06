@@ -37,10 +37,20 @@ function BoardPicker({ onSelect }: { onSelect: (chatId: string) => void }) {
         {(boards || []).map((board: any) => (
           <button
             key={board.id}
-            className="rounded-xl border p-4 text-left transition-all active:scale-[0.98]"
+            className="flex items-center gap-3 rounded-xl border p-4 text-left transition-all active:scale-[0.98]"
             style={{ background: "var(--bg-card)", borderColor: "var(--border-card)" }}
             onClick={() => onSelect(board.chatId)}
           >
+            {board.photoUrl ? (
+              <img src={board.photoUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
+            ) : (
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-semibold"
+                style={{ background: "var(--accent-blue)", color: "#fff" }}
+              >
+                {board.name[0].toUpperCase()}
+              </div>
+            )}
             <div className="text-[14px] font-medium">{board.name}</div>
           </button>
         ))}

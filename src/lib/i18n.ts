@@ -103,6 +103,12 @@ const translations = {
 
     // Project
     project: "Project",
+
+    // Move task
+    moveToBoard: "Move to...",
+    personalInbox: "Personal inbox",
+    moveTo: "Move",
+    taskMoved: "Moved!",
   },
   ru: {
     // General
@@ -208,6 +214,12 @@ const translations = {
 
     // Project
     project: "Проект",
+
+    // Move task
+    moveToBoard: "Переместить...",
+    personalInbox: "Личные входящие",
+    moveTo: "Переместить",
+    taskMoved: "Перемещено!",
   },
 } as const;
 

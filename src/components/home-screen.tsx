@@ -34,17 +34,31 @@ function FilterIcon({ color, glyph }: { color: string; glyph: string }) {
 }
 
 export function HomeScreen() {
-  const { ready, openTaskId, userId } = useTelegram();
+  const { ready, openTaskId, startBoardChatId, userId } = useTelegram();
   const { data: home, error: homeError } = useHome();
   const { data: deepLinkTask } = useTaskDetail(openTaskId);
 
   const [view, setView] = useState<ViewState>({ type: "home" });
+  const [deepLinkHandled, setDeepLinkHandled] = useState(false);
 
   const user = home?.user;
   const counts = home?.counts;
   const boards = home?.boards;
   const projectsList = home?.projects;
 
+  // Deep link: open specific board via startapp=chatn...
+  useEffect(() => {
+    if (deepLinkHandled || !startBoardChatId || !boards) return;
+    if (view.type !== "home") return;
+
+    const board = (boards as any[]).find((b: any) => b.chatId === startBoardChatId);
+    if (board) {
+      setView({ type: "board", chatId: board.chatId, label: board.name });
+      setDeepLinkHandled(true);
+    }
+  }, [startBoardChatId, boards, deepLinkHandled, view.type]);
+
+  // Deep link: open specific task
   useEffect(() => {
     if (!openTaskId || !deepLinkTask?.task) return;
     if (view.type !== "home") return;
@@ -213,12 +227,20 @@ export function HomeScreen() {
               style={i > 0 ? { borderTop: "1px solid var(--border-separator)" } : undefined}
               onClick={() => setView({ type: "board", chatId: b.chatId, label: b.name })}
             >
-              <div
-                className="flex h-[30px] w-[30px] items-center justify-center rounded-full text-[12px] font-semibold"
-                style={{ background: "var(--accent-blue)", color: "#fff" }}
-              >
-                {b.name[0].toUpperCase()}
-              </div>
+              {b.photoUrl ? (
+                <img
+                  src={b.photoUrl}
+                  alt=""
+                  className="h-[30px] w-[30px] rounded-full object-cover"
+                />
+              ) : (
+                <div
+                  className="flex h-[30px] w-[30px] items-center justify-center rounded-full text-[12px] font-semibold"
+                  style={{ background: "var(--accent-blue)", color: "#fff" }}
+                >
+                  {b.name[0].toUpperCase()}
+                </div>
+              )}
               <span className="flex-1 text-left text-[14px] font-medium">{b.name}</span>
               <span className="mr-1 text-[14px]" style={{ color: "var(--text-dim)" }}>⊞</span>
               <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>›</span>
