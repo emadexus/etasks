@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { t } from "@/lib/i18n";
 
 interface Comment {
   comment: { id: string; text: string; createdAt: string };
@@ -15,12 +16,12 @@ interface CommentThreadProps {
 function timeAgo(date: string): string {
   const ms = Date.now() - new Date(date).getTime();
   const mins = Math.floor(ms / 60000);
-  if (mins < 1) return "now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t("now");
+  if (mins < 60) return `${mins}${t("mAgo")}`;
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${hours}${t("hAgo")}`;
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${days}${t("dAgo")}`;
 }
 
 export function CommentThread({ comments, onAdd }: CommentThreadProps) {
@@ -36,9 +37,9 @@ export function CommentThread({ comments, onAdd }: CommentThreadProps) {
 
   return (
     <div>
-      <div className="mb-2 text-[11px]" style={{ color: "var(--text-muted)" }}>Comments</div>
+      <div className="mb-2 text-[11px]" style={{ color: "var(--text-muted)" }}>{t("comments")}</div>
       {comments.length === 0 && (
-        <p className="mb-3 text-[11px]" style={{ color: "var(--text-dim)" }}>No comments yet</p>
+        <p className="mb-3 text-[11px]" style={{ color: "var(--text-dim)" }}>{t("noCommentsYet")}</p>
       )}
       <div className="flex max-h-48 flex-col gap-1.5 overflow-y-auto">
         {comments.map((c) => (
@@ -58,7 +59,7 @@ export function CommentThread({ comments, onAdd }: CommentThreadProps) {
       <div className="mt-2 flex gap-2">
         <input className="flex-1 rounded-lg bg-transparent px-2.5 py-2 text-[12px] outline-none"
           style={{ background: "var(--bg-card)", color: "var(--text-primary)" }}
-          placeholder="Add a comment..." value={value}
+          placeholder={t("addComment")} value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           disabled={loading} />

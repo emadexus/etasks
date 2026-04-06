@@ -145,6 +145,13 @@ export function useTaskActions(chatId: string | null) {
 
 // ─── New user-centric hooks ───
 
+/** Combined home data: user + counts + boards + projects in one request. */
+export function useHome() {
+  const fetcher = useAuthFetcher();
+  const authReady = useAuthReady();
+  return useSWR(authReady ? "/api/home" : null, fetcher, swrOpts);
+}
+
 export function useUser() {
   const fetcher = useAuthFetcher();
   const authReady = useAuthReady();

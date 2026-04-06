@@ -1,5 +1,7 @@
 "use client";
 
+import { t } from "@/lib/i18n";
+
 interface TaskCardProps {
   task: {
     id: string;
@@ -19,26 +21,28 @@ interface TaskCardProps {
   onToggleStatus: (id: string, newStatus: string) => void;
 }
 
-const priorityConfig: Record<string, { label: string; color: string; bg: string }> = {
-  high: { label: "high", color: "var(--accent-orange)", bg: "var(--accent-orange-bg)" },
-  medium: { label: "med", color: "var(--accent-yellow)", bg: "var(--accent-yellow-bg)" },
-  low: { label: "low", color: "var(--text-dim)", bg: "rgba(255,255,255,0.04)" },
-};
+function getPriorityConfig(priority: string) {
+  switch (priority) {
+    case "high": return { label: t("priorityHigh"), color: "var(--accent-orange)", bg: "var(--accent-orange-bg)" };
+    case "medium": return { label: t("priorityMed"), color: "var(--accent-yellow)", bg: "var(--accent-yellow-bg)" };
+    default: return { label: t("priorityLow"), color: "var(--text-dim)", bg: "rgba(255,255,255,0.04)" };
+  }
+}
 
 function relativeDate(date: string): { text: string; urgent: boolean } {
   const ms = new Date(date).getTime() - Date.now();
   const hours = Math.round(ms / (60 * 60 * 1000));
-  if (hours < 0) return { text: "overdue", urgent: true };
-  if (hours < 1) return { text: "<1h", urgent: true };
-  if (hours < 24) return { text: `${hours}h`, urgent: hours <= 2 };
+  if (hours < 0) return { text: t("overdue"), urgent: true };
+  if (hours < 1) return { text: t("lessThan1h"), urgent: true };
+  if (hours < 24) return { text: `${hours}${t("hAgo").charAt(0)}`, urgent: hours <= 2 };
   const days = Math.round(hours / 24);
-  return { text: `${days}d`, urgent: false };
+  return { text: `${days}${t("dAgo").charAt(0)}`, urgent: false };
 }
 
 export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }: TaskCardProps) {
   const isDone = task.status === "done";
   const isInProgress = task.status === "in_progress";
-  const priority = priorityConfig[task.priority] || priorityConfig.medium;
+  const priority = getPriorityConfig(task.priority);
 
   const dueInfo = task.dateDue ? relativeDate(task.dateDue) : null;
   const plannedInfo = task.datePlanned ? relativeDate(task.datePlanned) : null;
@@ -50,7 +54,6 @@ export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }
       onClick={() => onTap(task.id)}
     >
       <div className="flex items-start gap-2.5">
-        {/* Checkbox */}
         <button
           className="mt-0.5 flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-full"
           style={{
@@ -67,7 +70,6 @@ export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }
           {isDone && <span className="text-[10px] font-bold text-white">✓</span>}
         </button>
 
-        {/* Content */}
         <div className="min-w-0 flex-1">
           <div
             className={`text-[13px] font-medium leading-snug ${isDone ? "line-through" : ""}`}
@@ -95,7 +97,7 @@ export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }
                     className="text-[10px]"
                     style={{ color: dueInfo.urgent ? "var(--accent-red)" : "var(--text-muted)" }}
                   >
-                    due {dueInfo.text}
+                    {t("duePrefix")} {dueInfo.text}
                   </span>
                 </>
               )}
@@ -103,7 +105,7 @@ export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }
                 <>
                   <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>·</span>
                   <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                    planned {plannedInfo.text}
+                    {t("plannedPrefix")} {plannedInfo.text}
                   </span>
                 </>
               )}

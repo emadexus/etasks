@@ -1,5 +1,7 @@
 "use client";
 
+import { t } from "@/lib/i18n";
+
 const PRESETS = ["1h", "6h", "12h", "24h", "48h", "3d", "7d", "30d"];
 
 interface ReminderChipsProps {
@@ -10,7 +12,7 @@ interface ReminderChipsProps {
 export function ReminderChips({ activeOffsets, onToggle }: ReminderChipsProps) {
   return (
     <div>
-      <div className="mb-1.5 text-[11px]" style={{ color: "var(--text-muted)" }}>Reminders</div>
+      <div className="mb-1.5 text-[11px]" style={{ color: "var(--text-muted)" }}>{t("reminders")}</div>
       <div className="flex flex-wrap gap-1">
         {PRESETS.map((p) => {
           const active = activeOffsets.includes(p);

@@ -6,6 +6,7 @@ import { useFilteredTasks, useTasks, useMembers, useTaskActions, useUser } from 
 import { TaskCard } from "./task-card";
 import { QuickAdd } from "./quick-add";
 import { TaskDetailSheet } from "./task-detail-sheet";
+import { t } from "@/lib/i18n";
 
 interface TaskListViewProps {
   context:
@@ -84,17 +85,14 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
     taskItems = userTasks;
   }
 
-  // Find current user's member ID for this board
   const currentMemberId = useMemo(() => {
     if (!membersData || !userId) return null;
     const me = (membersData as any[]).find((m: any) => m.telegramUserId?.toString() === userId);
     return me?.id || null;
   }, [membersData, userId]);
 
-  // Find current user's DB ID for non-board views
   const currentDbUserId = userData?.id || null;
 
-  // Filter by sub-tab
   const filteredByTab = useMemo(() => {
     if (subTab === "all") return taskItems;
 
@@ -110,17 +108,14 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
         return taskItems.filter((t: any) => t.task.ownerId === currentDbUserId);
       }
       if (subTab === "assignee") {
-        // Personal tasks don't have assignees, return empty
         return [];
       }
     }
     return taskItems;
   }, [taskItems, subTab, isBoard, currentMemberId, currentDbUserId]);
 
-  // Counts for tabs
   const tabCounts = useMemo(() => {
     const allCount = taskItems.filter((t: any) => t.task.status !== "done").length;
-
     let authorCount = 0;
     let assigneeCount = 0;
 
@@ -129,7 +124,6 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
       assigneeCount = taskItems.filter((t: any) => t.task.assigneeId === currentMemberId && t.task.status !== "done").length;
     } else if (currentDbUserId) {
       authorCount = taskItems.filter((t: any) => t.task.ownerId === currentDbUserId && t.task.status !== "done").length;
-      assigneeCount = 0;
     }
 
     return { all: allCount, author: authorCount, assignee: assigneeCount };
@@ -140,14 +134,13 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
   const sortedTasks = [...activeTasks, ...doneTasks];
 
   const tabs: { key: SubTab; label: string; count: number }[] = [
-    { key: "all", label: "All", count: tabCounts.all },
-    { key: "author", label: "Author", count: tabCounts.author },
-    { key: "assignee", label: "Assignee", count: tabCounts.assignee },
+    { key: "all", label: t("all"), count: tabCounts.all },
+    { key: "author", label: t("author"), count: tabCounts.author },
+    { key: "assignee", label: t("assignee"), count: tabCounts.assignee },
   ];
 
   return (
     <div className="mx-auto min-h-screen max-w-lg px-4 pb-8 pt-3">
-      {/* Header */}
       <div className="mb-3 flex items-center gap-2">
         <button
           className="flex h-8 w-8 items-center justify-center rounded-lg text-[18px] transition-colors active:bg-white/5"
@@ -159,14 +152,11 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
         <div className="flex-1 text-center">
           <div className="text-[17px] font-semibold tracking-tight">{context.label}</div>
         </div>
-        {/* Spacer to center title */}
         <div className="w-8" />
       </div>
 
-      {/* Sub-tabs */}
       <TabBar tabs={tabs} active={subTab} onChange={setSubTab} />
 
-      {/* Quick add */}
       <div className="mb-3">
         <QuickAdd
           onAdd={async (title) => {
@@ -183,14 +173,13 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
         />
       </div>
 
-      {/* Task list */}
       <div className="flex flex-col gap-1.5">
         {isLoading && (
-          <p className="py-12 text-center text-[13px]" style={{ color: "var(--text-muted)" }}>Loading tasks...</p>
+          <p className="py-12 text-center text-[13px]" style={{ color: "var(--text-muted)" }}>{t("loadingTasks")}</p>
         )}
         {!isLoading && sortedTasks.length === 0 && (
           <p className="py-12 text-center text-[13px]" style={{ color: "var(--text-muted)" }}>
-            No tasks yet.
+            {t("noTasksYet")}
           </p>
         )}
         {sortedTasks.map((item: any) => (

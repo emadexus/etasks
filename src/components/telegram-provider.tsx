@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState, createContext, useContext, type ReactNode } from "react";
+import { setLocale } from "@/lib/i18n";
 
 interface TelegramContext {
   initData: string | null;
   chatId: string | null;
   userId: string | null;
   openTaskId: string | null;
+  lang: string;
   ready: boolean;
 }
 
@@ -15,6 +17,7 @@ const TgContext = createContext<TelegramContext>({
   chatId: null,
   userId: null,
   openTaskId: null,
+  lang: "en",
   ready: false,
 });
 
@@ -28,12 +31,12 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
     chatId: null,
     userId: null,
     openTaskId: null,
+    lang: "en",
     ready: false,
   });
 
   useEffect(() => {
     try {
-      // Try to use Telegram WebApp global
       const tg = (window as any).Telegram?.WebApp;
       if (tg) {
         tg.ready();
@@ -42,32 +45,35 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         let openTaskId: string | null = null;
         const startParam = tg.initDataUnsafe?.start_param;
         if (startParam && startParam.startsWith("task")) {
-          // Deep link to specific task: "task{uuid}"
           openTaskId = startParam.slice(4);
         } else if (startParam && startParam.startsWith("chat")) {
-          // Decode: "chatn4929114614" -> "-4929114614"
           chatId = startParam.slice(4).replace("n", "-");
         } else if (startParam) {
           chatId = startParam;
         }
         const userId = tg.initDataUnsafe?.user?.id?.toString() || null;
+        const lang = tg.initDataUnsafe?.user?.language_code || "en";
 
+        setLocale(lang);
         console.log("[TG] initData:", initDataRaw ? `${initDataRaw.slice(0, 50)}...` : "null");
-        console.log("[TG] chatId:", chatId, "userId:", userId, "openTaskId:", openTaskId);
-        setCtx({ initData: initDataRaw, chatId, userId, openTaskId, ready: true });
+        console.log("[TG] chatId:", chatId, "userId:", userId, "lang:", lang);
+        setCtx({ initData: initDataRaw, chatId, userId, openTaskId, lang, ready: true });
       } else {
         console.log("[TG] No Telegram WebApp global found — using dev fallback");
-        // Dev fallback: use query params or defaults
         const params = new URLSearchParams(window.location.search);
         const chatId = params.get("chatId") || "-4929114614";
         const userId = "247463948";
-        setCtx({ initData: "dev", chatId, userId, openTaskId: null, ready: true });
+        const lang = params.get("lang") || navigator.language?.slice(0, 2) || "en";
+        setLocale(lang);
+        setCtx({ initData: "dev", chatId, userId, openTaskId: null, lang, ready: true });
       }
     } catch (e) {
       console.warn("Not in Telegram Mini App context:", e);
       const params = new URLSearchParams(window.location.search);
       const chatId = params.get("chatId") || "-4929114614";
-      setCtx({ initData: "dev", chatId, userId: "247463948", openTaskId: null, ready: true });
+      const lang = params.get("lang") || navigator.language?.slice(0, 2) || "en";
+      setLocale(lang);
+      setCtx({ initData: "dev", chatId, userId: "247463948", openTaskId: null, lang, ready: true });
     }
   }, []);
 

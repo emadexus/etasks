@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useTelegram } from "@/components/telegram-provider";
-import { useUser, useSmartFilterCounts, useBoards, useProjects, useTaskDetail } from "@/hooks/use-board";
+import { useHome, useTaskDetail } from "@/hooks/use-board";
 import { TaskListView } from "./task-list-view";
 import { FabMenu } from "./fab-menu";
+import { t } from "@/lib/i18n";
 
 type ViewState =
   | { type: "home" }
@@ -13,12 +14,12 @@ type ViewState =
   | { type: "board"; chatId: string; label: string };
 
 const smartFilters = [
-  { key: "all",       label: "All",          color: "#5856d6", glyph: "●" },
-  { key: "inbox",     label: "Inbox",        color: "#ff9500", glyph: "▣" },
-  { key: "today",     label: "Today",        color: "#30d158", glyph: "6" },
-  { key: "tomorrow",  label: "Tomorrow",     color: "#ff453a", glyph: "◈" },
-  { key: "next7days", label: "Next 7 Days",  color: "#5856d6", glyph: "▦" },
-  { key: "completed", label: "Completed",    color: "#30d158", glyph: "✓" },
+  { key: "all",       labelKey: "all" as const,       color: "#5856d6", glyph: "●" },
+  { key: "inbox",     labelKey: "inbox" as const,     color: "#ff9500", glyph: "▣" },
+  { key: "today",     labelKey: "today" as const,     color: "#30d158", glyph: "6" },
+  { key: "tomorrow",  labelKey: "tomorrow" as const,  color: "#ff453a", glyph: "◈" },
+  { key: "next7days", labelKey: "next7days" as const, color: "#5856d6", glyph: "▦" },
+  { key: "completed", labelKey: "completed" as const, color: "#30d158", glyph: "✓" },
 ];
 
 function FilterIcon({ color, glyph }: { color: string; glyph: string }) {
@@ -34,13 +35,15 @@ function FilterIcon({ color, glyph }: { color: string; glyph: string }) {
 
 export function HomeScreen() {
   const { ready, openTaskId } = useTelegram();
-  const { data: user } = useUser();
-  const { data: counts } = useSmartFilterCounts();
-  const { data: boards } = useBoards();
-  const { data: projectsList } = useProjects();
+  const { data: home } = useHome();
   const { data: deepLinkTask } = useTaskDetail(openTaskId);
 
   const [view, setView] = useState<ViewState>({ type: "home" });
+
+  const user = home?.user;
+  const counts = home?.counts;
+  const boards = home?.boards;
+  const projectsList = home?.projects;
 
   useEffect(() => {
     if (!openTaskId || !deepLinkTask?.task) return;
@@ -53,16 +56,16 @@ export function HomeScreen() {
         setView({ type: "board", chatId: board.chatId, label: board.name });
       }
     } else if (task.projectId) {
-      setView({ type: "project", projectId: task.projectId, label: "Project" });
+      setView({ type: "project", projectId: task.projectId, label: t("project") });
     } else {
-      setView({ type: "filter", filter: "inbox", label: "Inbox" });
+      setView({ type: "filter", filter: "inbox", label: t("inbox") });
     }
   }, [openTaskId, deepLinkTask, boards]);
 
   if (!ready) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p style={{ color: "var(--text-muted)" }}>Loading...</p>
+        <p style={{ color: "var(--text-muted)" }}>{t("loading")}</p>
       </div>
     );
   }
@@ -91,7 +94,7 @@ export function HomeScreen() {
             {(user?.firstName || "U")[0].toUpperCase()}
           </div>
           <span className="text-[15px] font-semibold">
-            {user?.firstName || "User"}{" "}
+            {user?.firstName || t("user")}{" "}
             <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>›</span>
           </span>
         </div>
@@ -109,9 +112,9 @@ export function HomeScreen() {
           ＋
         </div>
         <div className="flex-1 text-left">
-          <div className="text-[13px] font-medium">Add to group chat</div>
+          <div className="text-[13px] font-medium">{t("addToGroupChat")}</div>
           <div className="text-[11px] leading-tight" style={{ color: "var(--text-muted)" }}>
-            A collaborative project is created by adding the bot to a Telegram group
+            {t("addToGroupChatDesc")}
           </div>
         </div>
         <span className="text-[12px] tabular-nums" style={{ color: "var(--text-dim)" }}>
@@ -123,7 +126,7 @@ export function HomeScreen() {
       <button
         className="mb-4 flex w-full items-center gap-3 rounded-b-xl border-t px-3.5 py-3"
         style={{ background: "var(--bg-card)", borderColor: "var(--border-separator)" }}
-        onClick={() => setView({ type: "filter", filter: "inbox", label: "Inbox" })}
+        onClick={() => setView({ type: "filter", filter: "inbox", label: t("inbox") })}
       >
         <div
           className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] text-[16px] font-bold"
@@ -131,7 +134,7 @@ export function HomeScreen() {
         >
           +
         </div>
-        <span className="text-[13px] font-medium">Add task</span>
+        <span className="text-[13px] font-medium">{t("addTask")}</span>
       </button>
 
       {/* ── Smart filters ── */}
@@ -141,10 +144,10 @@ export function HomeScreen() {
             key={f.key}
             className="flex w-full items-center gap-3 px-3.5 py-2.5 transition-colors active:bg-white/5"
             style={i > 0 ? { borderTop: "1px solid var(--border-separator)" } : undefined}
-            onClick={() => setView({ type: "filter", filter: f.key, label: f.label })}
+            onClick={() => setView({ type: "filter", filter: f.key, label: t(f.labelKey) })}
           >
             <FilterIcon color={f.color} glyph={f.glyph} />
-            <span className="flex-1 text-left text-[14px] font-medium">{f.label}</span>
+            <span className="flex-1 text-left text-[14px] font-medium">{t(f.labelKey)}</span>
             <span className="mr-1 text-[14px] tabular-nums" style={{ color: "var(--text-dim)" }}>
               {counts?.[f.key as keyof typeof counts] ?? 0}
             </span>
@@ -201,7 +204,7 @@ export function HomeScreen() {
       )}
 
       <FabMenu
-        onNewTask={() => setView({ type: "filter", filter: "inbox", label: "Inbox" })}
+        onNewTask={() => setView({ type: "filter", filter: "inbox", label: t("inbox") })}
         onNewProject={() => {}}
         projectCount={projectsList?.length || 0}
         projectLimit={3}

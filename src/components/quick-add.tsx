@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { t } from "@/lib/i18n";
 
 interface QuickAddProps {
   onAdd: (title: string) => Promise<void>;
@@ -44,7 +45,7 @@ export function QuickAdd({ onAdd }: QuickAddProps) {
       <input
         ref={inputRef}
         className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-[var(--text-dim)]"
-        placeholder="Add task..."
+        placeholder={t("addTaskPlaceholder")}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && handleSubmit()}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { t } from "@/lib/i18n";
 
 interface CalendarPickerProps {
   dateDue: Date | null;
@@ -11,14 +12,17 @@ interface CalendarPickerProps {
   onCancel: () => void;
 }
 
-const DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-const RECURRENCE_OPTIONS = [
-  { label: "None", value: null },
-  { label: "Daily", value: JSON.stringify({ type: "daily", interval: 1 }) },
-  { label: "Weekly", value: JSON.stringify({ type: "weekly", interval: 1 }) },
-  { label: "Monthly", value: JSON.stringify({ type: "monthly", interval: 1 }) },
-  { label: "Yearly", value: JSON.stringify({ type: "yearly", interval: 1 }) },
-];
+function getDays() { return [t("mo"), t("tu"), t("we"), t("th"), t("fr"), t("sa"), t("su")]; }
+
+function getRecurrenceOptions() {
+  return [
+    { label: t("none"), value: null },
+    { label: t("daily"), value: JSON.stringify({ type: "daily", interval: 1 }) },
+    { label: t("weekly"), value: JSON.stringify({ type: "weekly", interval: 1 }) },
+    { label: t("monthly"), value: JSON.stringify({ type: "monthly", interval: 1 }) },
+    { label: t("yearly"), value: JSON.stringify({ type: "yearly", interval: 1 }) },
+  ];
+}
 
 function sameDay(a: Date | null, b: Date | null): boolean {
   if (!a || !b) return false;
@@ -74,28 +78,20 @@ export function CalendarPicker({ dateDue, datePlanned, notifyAt, recurrenceRule,
 
   const selectDay = (day: number) => {
     const newDate = new Date(viewYear, viewMonth, day);
-    if (selectedDate) {
-      newDate.setHours(selectedDate.getHours(), selectedDate.getMinutes());
-    }
+    if (selectedDate) newDate.setHours(selectedDate.getHours(), selectedDate.getMinutes());
     setSelectedDate(newDate);
   };
 
   const setQuickDate = (d: Date | null) => {
     setSelectedDate(d);
-    if (d) {
-      setViewYear(d.getFullYear());
-      setViewMonth(d.getMonth());
-    }
+    if (d) { setViewYear(d.getFullYear()); setViewMonth(d.getMonth()); }
   };
 
   const handleAccept = () => {
-    const applyTime = (d: Date | null, t: string): string | null => {
+    const applyTime = (d: Date | null, timeStr: string): string | null => {
       if (!d) return null;
       const result = new Date(d);
-      if (t) {
-        const [h, m] = t.split(":").map(Number);
-        result.setHours(h, m, 0, 0);
-      }
+      if (timeStr) { const [h, m] = timeStr.split(":").map(Number); result.setHours(h, m, 0, 0); }
       return result.toISOString();
     };
 
@@ -120,19 +116,20 @@ export function CalendarPicker({ dateDue, datePlanned, notifyAt, recurrenceRule,
   const monthName = new Date(viewYear, viewMonth).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
   const recurrenceLabel = (() => {
-    if (!selectedRecurrence) return "Set specific time";
+    if (!selectedRecurrence) return t("setSpecificTime");
     try {
       const r = JSON.parse(selectedRecurrence);
-      return r.type.charAt(0).toUpperCase() + r.type.slice(1);
-    } catch { return "Custom"; }
+      const key = r.type as "daily" | "weekly" | "monthly" | "yearly";
+      return t(key);
+    } catch { return t("custom"); }
   })();
+
+  const DAYS = getDays();
+  const RECURRENCE_OPTIONS = getRecurrenceOptions();
 
   return (
     <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60">
-      <div
-        className="w-full max-w-lg rounded-t-2xl"
-        style={{ background: "var(--bg-primary)" }}
-      >
+      <div className="w-full max-w-lg rounded-t-2xl" style={{ background: "var(--bg-primary)" }}>
         {/* Tabs */}
         <div className="flex" style={{ borderBottom: "1px solid var(--border-separator)" }}>
           {(["planned", "due"] as const).map((tab) => (
@@ -146,7 +143,7 @@ export function CalendarPicker({ dateDue, datePlanned, notifyAt, recurrenceRule,
               }}
               onClick={() => setActiveTab(tab)}
             >
-              {tab === "planned" ? "Date planned" : "Date due"}
+              {tab === "planned" ? t("datePlanned") : t("dateDue")}
             </button>
           ))}
         </div>
@@ -194,9 +191,9 @@ export function CalendarPicker({ dateDue, datePlanned, notifyAt, recurrenceRule,
         {/* Quick actions */}
         <div className="flex gap-2 px-5 pb-4">
           {[
-            { label: "Clear", icon: "✕", action: () => setQuickDate(null) },
-            { label: "Today", icon: "◉", action: () => setQuickDate(today) },
-            { label: "Tomorrow", icon: "→", action: () => { const t = new Date(); t.setDate(t.getDate() + 1); setQuickDate(t); } },
+            { label: t("clear"), icon: "✕", action: () => setQuickDate(null) },
+            { label: t("today"), icon: "◉", action: () => setQuickDate(today) },
+            { label: t("tomorrow"), icon: "→", action: () => { const d = new Date(); d.setDate(d.getDate() + 1); setQuickDate(d); } },
           ].map((btn) => (
             <button
               key={btn.label}
@@ -212,72 +209,47 @@ export function CalendarPicker({ dateDue, datePlanned, notifyAt, recurrenceRule,
 
         {/* Time / Notify / Repeat */}
         <div className="mx-5 overflow-hidden rounded-xl" style={{ background: "var(--bg-card)" }}>
-          {/* Time */}
           <div className="flex items-center justify-between px-3.5 py-3">
             <div className="flex items-center gap-2.5">
               <span className="text-[15px]" style={{ color: "var(--text-muted)" }}>◷</span>
-              <span className="text-[14px]">Time</span>
+              <span className="text-[14px]">{t("time")}</span>
             </div>
-            <input
-              type="time"
-              className="rounded bg-transparent px-2 py-0.5 text-[14px] outline-none"
-              style={{ color: "var(--text-primary)", colorScheme: "dark" }}
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              placeholder="--:--"
-            />
+            <input type="time" className="rounded bg-transparent px-2 py-0.5 text-[14px] outline-none"
+              style={{ color: "var(--text-primary)", colorScheme: "dark" }} value={time} onChange={(e) => setTime(e.target.value)} />
           </div>
 
           <div style={{ borderTop: "1px solid var(--border-separator)" }} />
 
-          {/* Notify */}
           <div className="flex items-center justify-between px-3.5 py-3">
             <div className="flex items-center gap-2.5">
               <span className="text-[15px]" style={{ color: "var(--text-muted)" }}>⏰</span>
-              <span className="text-[14px]">Notify</span>
+              <span className="text-[14px]">{t("notify")}</span>
             </div>
             {notify ? (
               <div className="flex items-center gap-2">
-                <input
-                  type="time"
-                  className="rounded bg-transparent px-2 py-0.5 text-[14px] outline-none"
-                  style={{ color: "var(--text-primary)", colorScheme: "dark" }}
-                  value={notifyTime}
-                  onChange={(e) => setNotifyTime(e.target.value)}
-                />
-                <button
-                  className="text-[12px]"
-                  style={{ color: "var(--text-dim)" }}
-                  onClick={() => { setNotify(false); setNotifyTime(""); }}
-                >
-                  ✕
-                </button>
+                <input type="time" className="rounded bg-transparent px-2 py-0.5 text-[14px] outline-none"
+                  style={{ color: "var(--text-primary)", colorScheme: "dark" }} value={notifyTime} onChange={(e) => setNotifyTime(e.target.value)} />
+                <button className="text-[12px]" style={{ color: "var(--text-dim)" }}
+                  onClick={() => { setNotify(false); setNotifyTime(""); }}>✕</button>
               </div>
             ) : (
-              <button
-                className="text-[13px]"
-                style={{ color: "var(--text-muted)" }}
-                onClick={() => setNotify(true)}
-              >
-                Set specific time
+              <button className="text-[13px]" style={{ color: "var(--text-muted)" }} onClick={() => setNotify(true)}>
+                {t("setSpecificTime")}
               </button>
             )}
           </div>
 
           <div style={{ borderTop: "1px solid var(--border-separator)" }} />
 
-          {/* Repeat */}
           <div className="px-3.5 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <span className="text-[15px]" style={{ color: "var(--text-muted)" }}>↻</span>
-                <span className="text-[14px]">Repeat</span>
+                <span className="text-[14px]">{t("repeat")}</span>
               </div>
-              <button
-                className="text-[13px]"
+              <button className="text-[13px]"
                 style={{ color: selectedRecurrence ? "var(--accent-purple)" : "var(--text-muted)" }}
-                onClick={() => setShowRecurrencePicker(!showRecurrencePicker)}
-              >
+                onClick={() => setShowRecurrencePicker(!showRecurrencePicker)}>
                 {recurrenceLabel}
               </button>
             </div>
@@ -285,15 +257,12 @@ export function CalendarPicker({ dateDue, datePlanned, notifyAt, recurrenceRule,
             {showRecurrencePicker && (
               <div className="mt-2.5 flex flex-wrap gap-1.5">
                 {RECURRENCE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.label}
-                    className="rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors"
+                  <button key={opt.label} className="rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors"
                     style={{
                       background: selectedRecurrence === opt.value ? "var(--accent-purple)" : "var(--bg-secondary)",
                       color: selectedRecurrence === opt.value ? "#fff" : "var(--text-secondary)",
                     }}
-                    onClick={() => { setSelectedRecurrence(opt.value); setShowRecurrencePicker(false); }}
-                  >
+                    onClick={() => { setSelectedRecurrence(opt.value); setShowRecurrencePicker(false); }}>
                     {opt.label}
                   </button>
                 ))}
@@ -304,19 +273,13 @@ export function CalendarPicker({ dateDue, datePlanned, notifyAt, recurrenceRule,
 
         {/* Footer */}
         <div className="flex gap-3 px-5 py-5">
-          <button
-            className="flex-1 rounded-xl py-3 text-center text-[14px] font-semibold transition-colors active:bg-white/5"
-            style={{ color: "var(--accent-purple)" }}
-            onClick={onCancel}
-          >
-            CANCEL
+          <button className="flex-1 rounded-xl py-3 text-center text-[14px] font-semibold transition-colors active:bg-white/5"
+            style={{ color: "var(--accent-purple)" }} onClick={onCancel}>
+            {t("cancel")}
           </button>
-          <button
-            className="flex-1 rounded-xl py-3 text-center text-[14px] font-semibold transition-colors active:opacity-90"
-            style={{ background: "var(--accent-purple)", color: "#fff" }}
-            onClick={handleAccept}
-          >
-            ACCEPT
+          <button className="flex-1 rounded-xl py-3 text-center text-[14px] font-semibold transition-colors active:opacity-90"
+            style={{ background: "var(--accent-purple)", color: "#fff" }} onClick={handleAccept}>
+            {t("accept")}
           </button>
         </div>
       </div>

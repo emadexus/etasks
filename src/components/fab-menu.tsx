@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useProjectActions } from "@/hooks/use-board";
+import { t } from "@/lib/i18n";
 
 interface FabMenuProps {
   onNewTask: () => void;
@@ -42,7 +43,6 @@ export function FabMenu({ onNewTask, onNewProject, projectCount, projectLimit }:
 
       {open && (
         <div className="fixed bottom-20 right-5 z-[80] flex w-[280px] flex-col gap-1.5">
-          {/* New task */}
           <button
             className="flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl transition-all active:scale-[0.97]"
             style={{ background: "var(--bg-secondary)" }}
@@ -53,14 +53,13 @@ export function FabMenu({ onNewTask, onNewProject, projectCount, projectLimit }:
               ✎
             </div>
             <div className="text-left">
-              <div className="text-[13px] font-medium">New task</div>
+              <div className="text-[13px] font-medium">{t("newTask")}</div>
               <div className="text-[10px] leading-tight" style={{ color: "var(--text-muted)" }}>
-                Quickly add a task to "Incoming" or to a custom project
+                {t("newTaskDesc")}
               </div>
             </div>
           </button>
 
-          {/* Add to group chat */}
           <button
             className="flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl transition-all active:scale-[0.97]"
             style={{ background: "var(--bg-secondary)" }}
@@ -71,14 +70,13 @@ export function FabMenu({ onNewTask, onNewProject, projectCount, projectLimit }:
               ⊕
             </div>
             <div className="text-left">
-              <div className="text-[13px] font-medium">Add to group chat</div>
+              <div className="text-[13px] font-medium">{t("addToGroupChatShort")}</div>
               <div className="text-[10px] leading-tight" style={{ color: "var(--text-muted)" }}>
-                A collaborative project via Telegram group
+                {t("addToGroupChatDescShort")}
               </div>
             </div>
           </button>
 
-          {/* New project */}
           <button
             className="flex items-center gap-3 rounded-xl px-4 py-3 shadow-xl transition-all active:scale-[0.97]"
             style={{ background: "var(--bg-secondary)" }}
@@ -93,7 +91,7 @@ export function FabMenu({ onNewTask, onNewProject, projectCount, projectLimit }:
                 <input
                   autoFocus
                   className="w-full bg-transparent text-[13px] font-medium outline-none"
-                  placeholder="Project name..."
+                  placeholder={t("projectNamePlaceholder")}
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleNewProject()}
@@ -101,9 +99,9 @@ export function FabMenu({ onNewTask, onNewProject, projectCount, projectLimit }:
                 />
               ) : (
                 <>
-                  <div className="text-[13px] font-medium">New project</div>
+                  <div className="text-[13px] font-medium">{t("newProject")}</div>
                   <div className="text-[10px] leading-tight" style={{ color: "var(--text-muted)" }}>
-                    Create a collection for tasks
+                    {t("newProjectDesc")}
                   </div>
                 </>
               )}
@@ -115,7 +113,6 @@ export function FabMenu({ onNewTask, onNewProject, projectCount, projectLimit }:
         </div>
       )}
 
-      {/* FAB */}
       <button
         className="fixed bottom-5 right-5 z-[80] flex h-[52px] w-[52px] items-center justify-center rounded-full shadow-lg transition-all active:scale-90"
         style={{ background: "var(--accent-purple)" }}

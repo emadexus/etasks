@@ -5,6 +5,7 @@ import { useTaskDetail, useComments, useTaskActions, useMembers } from "@/hooks/
 import { CommentThread } from "./comment-thread";
 import { ReminderChips } from "./reminder-chips";
 import { CalendarPicker } from "./calendar-picker";
+import { t } from "@/lib/i18n";
 
 interface TaskDetailSheetProps {
   taskId: string | null;
@@ -12,17 +13,21 @@ interface TaskDetailSheetProps {
   onClose: () => void;
 }
 
-const statusMap: Record<string, { label: string; color: string; next: string }> = {
-  todo: { label: "To do", color: "var(--text-muted)", next: "in_progress" },
-  in_progress: { label: "In progress", color: "var(--accent-blue)", next: "done" },
-  done: { label: "Done", color: "var(--accent-green)", next: "todo" },
-};
+function getStatusMap() {
+  return {
+    todo: { label: t("statusTodo"), color: "var(--text-muted)", next: "in_progress" },
+    in_progress: { label: t("statusInProgress"), color: "var(--accent-blue)", next: "done" },
+    done: { label: t("statusDone"), color: "var(--accent-green)", next: "todo" },
+  } as Record<string, { label: string; color: string; next: string }>;
+}
 
-const priorityMap: Record<string, { label: string; color: string; next: string }> = {
-  low: { label: "Low", color: "var(--text-dim)", next: "medium" },
-  medium: { label: "Medium", color: "var(--accent-yellow)", next: "high" },
-  high: { label: "High", color: "var(--accent-orange)", next: "low" },
-};
+function getPriorityMap() {
+  return {
+    low: { label: t("priorityLowFull"), color: "var(--text-dim)", next: "medium" },
+    medium: { label: t("priorityMediumFull"), color: "var(--accent-yellow)", next: "high" },
+    high: { label: t("priorityHighFull"), color: "var(--accent-orange)", next: "low" },
+  } as Record<string, { label: string; color: string; next: string }>;
+}
 
 function CycleLabel({ value, map, onCycle }: {
   value: string;
@@ -55,7 +60,7 @@ function AssigneePicker({ assignee, members, onChange }: {
         style={{ color: assignee ? "var(--accent-blue)" : "var(--text-dim)" }}
         onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
       >
-        {assignee ? `@${assignee.username || assignee.firstName}` : "unassigned"}
+        {assignee ? `@${assignee.username || assignee.firstName}` : t("unassigned")}
       </span>
       {open && (
         <>
@@ -69,7 +74,7 @@ function AssigneePicker({ assignee, members, onChange }: {
               style={{ color: "var(--text-muted)" }}
               onClick={(e) => { e.stopPropagation(); onChange(null); setOpen(false); }}
             >
-              Unassign
+              {t("unassign")}
             </button>
             {members.map((m: any) => (
               <button key={m.id}
@@ -82,7 +87,7 @@ function AssigneePicker({ assignee, members, onChange }: {
             ))}
             {members.length === 0 && (
               <div className="px-3 py-2 text-[11px]" style={{ color: "var(--text-dim)" }}>
-                No members found
+                {t("noMembersFound")}
               </div>
             )}
           </div>
@@ -93,7 +98,7 @@ function AssigneePicker({ assignee, members, onChange }: {
 }
 
 function formatDate(d: Date | null): string {
-  if (!d) return "Not set";
+  if (!d) return t("notSet");
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
@@ -130,15 +135,8 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
     setPendingUpdates(n => n + 1);
 
     updateTask(localTask?.id || taskId!, { [field]: value })
-      .then(() => {
-        setPendingUpdates(n => n - 1);
-        mutateTask();
-      })
-      .catch((e) => {
-        console.error(e);
-        setPendingUpdates(n => n - 1);
-        setSaving(false);
-      });
+      .then(() => { setPendingUpdates(n => n - 1); mutateTask(); })
+      .catch((e) => { console.error(e); setPendingUpdates(n => n - 1); setSaving(false); });
   }, [localTask, taskId, updateTask, mutateTask]);
 
   const handleMultiUpdate = useCallback(async (updates: Record<string, any>) => {
@@ -147,15 +145,8 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
     setPendingUpdates(n => n + 1);
 
     updateTask(localTask?.id || taskId!, updates)
-      .then(() => {
-        setPendingUpdates(n => n - 1);
-        mutateTask();
-      })
-      .catch((e) => {
-        console.error(e);
-        setPendingUpdates(n => n - 1);
-        setSaving(false);
-      });
+      .then(() => { setPendingUpdates(n => n - 1); mutateTask(); })
+      .catch((e) => { console.error(e); setPendingUpdates(n => n - 1); setSaving(false); });
   }, [localTask, taskId, updateTask, mutateTask]);
 
   if (!taskId || !localTask) return null;
@@ -167,6 +158,9 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
   const isOverdue = dateDue ? dateDue.getTime() < Date.now() : false;
   const isBoard = !!task.boardId;
 
+  const statusMap = getStatusMap();
+  const priorityMap = getPriorityMap();
+
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/60" onClick={onClose} />
@@ -174,16 +168,14 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
         className="fixed inset-x-0 bottom-0 z-50 flex max-h-[90vh] flex-col rounded-t-2xl"
         style={{ background: "var(--bg-secondary)" }}
       >
-        {/* Handle */}
         <div className="flex-shrink-0 px-4 pt-3">
           <div className="mx-auto mb-1 h-1 w-8 rounded-full" style={{ background: "var(--text-dim)" }} />
           <div className="h-4 text-center text-[10px]" style={{ color: "var(--text-dim)" }}>
-            {saving ? "Saving..." : ""}
+            {saving ? t("saving") : ""}
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 pb-8">
-          {/* Title */}
           <input
             className="mb-1 w-full bg-transparent text-[16px] font-semibold outline-none"
             style={{ color: "var(--text-primary)" }}
@@ -192,18 +184,16 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
             onBlur={() => title !== task.title && handleUpdate("title", title)}
           />
 
-          {/* Description */}
           <textarea
             className="mb-3 w-full resize-none bg-transparent text-[13px] outline-none"
             style={{ color: "var(--text-secondary)" }}
-            placeholder="Add description..."
+            placeholder={t("addDescription")}
             rows={2}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             onBlur={() => description !== (task.description || "") && handleUpdate("description", description)}
           />
 
-          {/* Meta row */}
           <div className="mb-3 flex flex-wrap items-center gap-1.5">
             <CycleLabel value={task.status} map={statusMap} onCycle={(next) => handleUpdate("status", next)} />
             <CycleLabel value={task.priority} map={priorityMap} onCycle={(next) => handleUpdate("priority", next)} />
@@ -216,7 +206,6 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
             )}
           </div>
 
-          {/* Dates */}
           <button
             className="mb-3 w-full rounded-xl px-3 py-2.5 text-left transition-colors active:bg-white/5"
             style={{ background: "var(--bg-card)" }}
@@ -225,7 +214,7 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                  Due
+                  {t("due")}
                 </div>
                 <div className="text-[13px]" style={{ color: isOverdue ? "var(--accent-red)" : "var(--text-primary)" }}>
                   {formatDate(dateDue)}
@@ -234,7 +223,7 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
               <div className="h-6" style={{ width: 1, background: "var(--border-separator)" }} />
               <div className="flex-1">
                 <div className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
-                  Planned
+                  {t("planned")}
                 </div>
                 <div className="text-[13px]" style={{ color: "var(--text-primary)" }}>
                   {formatDate(datePlanned)}
@@ -249,15 +238,14 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
                   {(() => {
                     try {
                       const rule = JSON.parse(task.recurrenceRule);
-                      return `Repeats ${rule.type}`;
-                    } catch { return "Recurring"; }
+                      return `${t("repeats")} ${t(rule.type as any) || rule.type}`;
+                    } catch { return t("recurring"); }
                   })()}
                 </span>
               </div>
             )}
           </button>
 
-          {/* Reminders */}
           {dateDue && (
             <div className="mb-3">
               <ReminderChips
@@ -274,7 +262,6 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
             </div>
           )}
 
-          {/* Comments */}
           {(isBoard || (commentsData && commentsData.length > 0)) && (
             <div className="border-t pt-3" style={{ borderColor: "var(--border-separator)" }}>
               <CommentThread
@@ -295,10 +282,7 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
           datePlanned={datePlanned}
           notifyAt={task.notifyAt ? new Date(task.notifyAt) : null}
           recurrenceRule={task.recurrenceRule}
-          onAccept={(updates) => {
-            handleMultiUpdate(updates);
-            setShowCalendar(false);
-          }}
+          onAccept={(updates) => { handleMultiUpdate(updates); setShowCalendar(false); }}
           onCancel={() => setShowCalendar(false)}
         />
       )}
