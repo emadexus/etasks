@@ -9,6 +9,7 @@ interface TelegramContext {
   userId: string | null;
   openTaskId: string | null;
   lang: string;
+  tzOffset: number; // minutes offset from UTC (e.g. -120 for UTC+2)
   ready: boolean;
 }
 
@@ -18,6 +19,7 @@ const TgContext = createContext<TelegramContext>({
   userId: null,
   openTaskId: null,
   lang: "en",
+  tzOffset: new Date().getTimezoneOffset(),
   ready: false,
 });
 
@@ -32,6 +34,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
     userId: null,
     openTaskId: null,
     lang: "en",
+    tzOffset: new Date().getTimezoneOffset(),
     ready: false,
   });
 
@@ -40,6 +43,11 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
       const tg = (window as any).Telegram?.WebApp;
       if (tg) {
         tg.ready();
+        // Prevent accidental close by scroll
+        if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
+        if (tg.isVerticalSwipesEnabled !== undefined) tg.isVerticalSwipesEnabled = false;
+        // Expand to full height
+        if (tg.expand) tg.expand();
         const initDataRaw = tg.initData || null;
         let chatId = new URLSearchParams(window.location.search).get("chatId");
         let openTaskId: string | null = null;
@@ -57,7 +65,8 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         setLocale(lang);
         console.log("[TG] initData:", initDataRaw ? `${initDataRaw.slice(0, 50)}...` : "null");
         console.log("[TG] chatId:", chatId, "userId:", userId, "lang:", lang);
-        setCtx({ initData: initDataRaw, chatId, userId, openTaskId, lang, ready: true });
+        const tzOffset = new Date().getTimezoneOffset();
+        setCtx({ initData: initDataRaw, chatId, userId, openTaskId, lang, tzOffset, ready: true });
       } else {
         console.log("[TG] No Telegram WebApp global found — using dev fallback");
         const params = new URLSearchParams(window.location.search);
@@ -65,7 +74,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         const userId = "247463948";
         const lang = params.get("lang") || navigator.language?.slice(0, 2) || "en";
         setLocale(lang);
-        setCtx({ initData: "dev", chatId, userId, openTaskId: null, lang, ready: true });
+        setCtx({ initData: "dev", chatId, userId, openTaskId: null, lang, tzOffset: new Date().getTimezoneOffset(), ready: true });
       }
     } catch (e) {
       console.warn("Not in Telegram Mini App context:", e);
@@ -73,7 +82,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
       const chatId = params.get("chatId") || "-4929114614";
       const lang = params.get("lang") || navigator.language?.slice(0, 2) || "en";
       setLocale(lang);
-      setCtx({ initData: "dev", chatId, userId: "247463948", openTaskId: null, lang, ready: true });
+      setCtx({ initData: "dev", chatId, userId: "247463948", openTaskId: null, lang, tzOffset: new Date().getTimezoneOffset(), ready: true });
     }
   }, []);
 

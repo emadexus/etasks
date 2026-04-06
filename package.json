@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.600.0",
     "@neondatabase/serverless": "^1.0.2",
     "@telegram-apps/sdk-react": "^3.3.9",
     "@upstash/qstash": "^2.10.1",

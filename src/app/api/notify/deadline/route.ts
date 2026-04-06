@@ -42,6 +42,8 @@ async function handler(req: NextRequest) {
     return NextResponse.json({ ok: true, skipped: "no due date" });
   }
 
+  const lang = board?.language || "en";
+
   const msLeft = task.dateDue.getTime() - Date.now();
   const hoursLeft = Math.max(0, Math.round(msLeft / (60 * 60 * 1000)));
   const timeLeft = hoursLeft >= 24
@@ -52,6 +54,7 @@ async function handler(req: NextRequest) {
     task.title,
     timeLeft,
     assignee?.username || null,
+    lang,
   );
 
   if (board) {

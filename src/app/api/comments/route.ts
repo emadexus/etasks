@@ -34,7 +34,6 @@ export async function POST(req: NextRequest) {
   const taskResult = await getTaskWithDetails(taskId);
   if (!taskResult) return NextResponse.json({ error: "Task not found" }, { status: 404 });
 
-  // Board task: need member record for comment authorship
   if (taskResult.task.boardId) {
     const member = await getMemberByTelegramId(taskResult.task.boardId, auth.userId);
     if (!member) return NextResponse.json({ error: "Not a member" }, { status: 403 });
@@ -50,7 +49,8 @@ export async function POST(req: NextRequest) {
       .limit(1);
 
     if (board[0]) {
-      const message = formatComment(member.firstName, taskResult.task.title, text);
+      const lang = board[0].language || "en";
+      const message = formatComment(member.firstName, taskResult.task.title, text, lang);
       await notifyGroup(board[0].telegramChatId, message);
 
       if (taskResult.assignee && taskResult.assignee.id !== member.id) {
@@ -64,6 +64,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(comment, { status: 201 });
   }
 
-  // Personal task: no comments support yet (no member record)
   return NextResponse.json({ error: "Comments not supported for personal tasks" }, { status: 400 });
 }

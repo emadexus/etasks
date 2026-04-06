@@ -5,35 +5,37 @@ import { bot } from "@/lib/telegram/bot";
 import { db } from "@/lib/db";
 import { boards, members, tasks, comments } from "@/lib/db/schema";
 import { eq, and, like } from "drizzle-orm";
-import { notifyGroup } from "@/lib/telegram/notify";
+import { notifyGroup, botT } from "@/lib/telegram/notify";
 import { upsertMember } from "@/lib/db/queries";
+
+function boardKeyboard(chatId: number | bigint, lang: string): InlineKeyboardMarkup {
+  return {
+    inline_keyboard: [[
+      { text: botT("openTaskBoard", lang), url: `https://t.me/e_task_bot/open?startapp=chat${chatId.toString().replace("-", "n")}` }
+    ]]
+  };
+}
 
 // Handle /start command in group or private chat
 bot.command("start", async (ctx) => {
   const chat = ctx.chat;
   if (chat.type === "private") {
-    await ctx.reply("Welcome to etasks! Add me to a group to create a task board.");
+    const userLang = ctx.from?.language_code || "en";
+    await ctx.reply(botT("welcome", userLang));
     return;
   }
 
-  // In group — check if board exists, if not create it
   const existing = await db.select().from(boards)
     .where(eq(boards.telegramChatId, BigInt(chat.id)))
     .limit(1);
 
   if (existing.length > 0) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    const keyboard: InlineKeyboardMarkup = {
-      inline_keyboard: [[
-        { text: "Open Task Board", url: `https://t.me/e_task_bot/open?startapp=chat${chat.id.toString().replace("-", "n")}` }
-      ]]
-    };
-    await ctx.reply(`Task board is ready for <b>${chat.title}</b>!`, {
+    const lang = existing[0].language || "en";
+    await ctx.reply(`${botT("boardReady", lang)} <b>${chat.title}</b>!`, {
       parse_mode: "HTML",
-      reply_markup: keyboard,
+      reply_markup: boardKeyboard(chat.id, lang),
     });
   } else {
-    // Create board on /start in group
     const [newBoard] = await db.insert(boards).values({
       telegramChatId: BigInt(chat.id),
       name: chat.title || "Untitled Board",
@@ -58,7 +60,6 @@ bot.command("start", async (ctx) => {
       console.error("Failed to sync admins:", e);
     }
 
-    // Also sync the user who sent /start (may be a regular member, not an admin)
     const sender = ctx.from;
     if (sender && !sender.is_bot) {
       try {
@@ -68,17 +69,56 @@ bot.command("start", async (ctx) => {
       }
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    const keyboard: InlineKeyboardMarkup = {
-      inline_keyboard: [[
-        { text: "Open Task Board", url: `https://t.me/e_task_bot/open?startapp=chat${chat.id.toString().replace("-", "n")}` }
-      ]]
-    };
+    const lang = newBoard.language || "en";
     await ctx.reply(
-      `Board created for <b>${chat.title}</b>!\nStart the bot privately for personal notifications.`,
-      { parse_mode: "HTML", reply_markup: keyboard }
+      `${botT("boardCreated", lang)} <b>${chat.title}</b>!\n${botT("startPrivate", lang)}`,
+      { parse_mode: "HTML", reply_markup: boardKeyboard(chat.id, lang) }
     );
   }
+});
+
+// Handle /lang command to set group language
+bot.command("lang", async (ctx) => {
+  const chat = ctx.chat;
+  if (chat.type !== "group" && chat.type !== "supergroup") {
+    await ctx.reply("This command works in groups only.");
+    return;
+  }
+
+  // Check sender is admin
+  const sender = ctx.from;
+  if (!sender) return;
+  try {
+    const chatMember = await bot.api.getChatMember(chat.id, sender.id);
+    if (chatMember.status !== "creator" && chatMember.status !== "administrator") {
+      await ctx.reply("Only group admins can change the language.");
+      return;
+    }
+  } catch {
+    return;
+  }
+
+  const arg = ctx.match?.trim().toLowerCase();
+  if (!arg || !["ru", "en"].includes(arg)) {
+    await ctx.reply("Usage: /lang ru or /lang en");
+    return;
+  }
+
+  const board = await db.select().from(boards)
+    .where(eq(boards.telegramChatId, BigInt(chat.id)))
+    .limit(1);
+
+  if (board.length === 0) {
+    await ctx.reply("No board found. Use /start first.");
+    return;
+  }
+
+  await db.update(boards)
+    .set({ language: arg })
+    .where(eq(boards.id, board[0].id));
+
+  const langName = arg === "ru" ? botT("langRu", arg) : botT("langEn", arg);
+  await ctx.reply(`${botT("langSet", arg)} ${langName}`);
 });
 
 // Handle bot being added to a group
@@ -94,8 +134,10 @@ bot.on("my_chat_member", async (ctx) => {
       .limit(1);
 
     let boardId: string;
+    let lang = "en";
     if (existing.length > 0) {
       boardId = existing[0].id;
+      lang = existing[0].language || "en";
     } else {
       const [newBoard] = await db.insert(boards).values({
         telegramChatId: BigInt(chat.id),
@@ -123,15 +165,9 @@ bot.on("my_chat_member", async (ctx) => {
       console.error("Failed to sync members:", e);
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    const keyboard: InlineKeyboardMarkup = {
-      inline_keyboard: [[
-        { text: "Open Task Board", url: `https://t.me/e_task_bot/open?startapp=chat${chat.id.toString().replace("-", "n")}` }
-      ]]
-    };
     await notifyGroup(BigInt(chat.id),
-      `Board created for <b>${chat.title}</b> ✨\nStart the bot privately for personal notifications.`,
-      keyboard
+      `${botT("boardCreated", lang)} <b>${chat.title}</b> ✨\n${botT("startPrivate", lang)}`,
+      boardKeyboard(chat.id, lang)
     );
   }
 
@@ -188,20 +224,18 @@ bot.on("message:text", async (ctx) => {
   const sender = ctx.from;
   if (!sender || sender.is_bot) return;
 
-  // Find the board for this chat
   const boardResult = await db.select().from(boards)
     .where(eq(boards.telegramChatId, BigInt(chat.id)))
     .limit(1);
   if (boardResult.length === 0) return;
   const boardRow = boardResult[0];
+  const lang = boardRow.language || "en";
 
-  // Try to extract a task title from the replied-to message
-  // Our notification format: "<b>New task</b>\n{title}\n● ..." or "... commented on <b>{title}</b>..."
   const botText = reply.text || "";
   let matchedTask: typeof tasks.$inferSelect | null = null;
 
-  // Try "New task\n{title}" format first
-  const newTaskMatch = botText.match(/^New task\n(.+)/m);
+  // Try "New task\n{title}" or "Новая задача\n{title}" format
+  const newTaskMatch = botText.match(/^(?:New task|Новая задача)\n(.+)/m);
   if (newTaskMatch) {
     const titleCandidate = newTaskMatch[1].trim();
     const found = await db.select().from(tasks)
@@ -210,9 +244,9 @@ bot.on("message:text", async (ctx) => {
     if (found.length > 0) matchedTask = found[0];
   }
 
-  // Try "commented on {title}" format
+  // Try "commented on {title}" or "прокомментировал(а) {title}" format
   if (!matchedTask) {
-    const commentMatch = botText.match(/commented on ([\s\S]+?)\n/);
+    const commentMatch = botText.match(/(?:commented on|прокомментировал\(а\))\s+([\s\S]+?)\n/);
     if (commentMatch) {
       const titleCandidate = commentMatch[1].replace(/<[^>]+>/g, "").trim();
       const found = await db.select().from(tasks)
@@ -224,7 +258,6 @@ bot.on("message:text", async (ctx) => {
 
   if (!matchedTask) return;
 
-  // Upsert the sender as a member and add the comment
   try {
     const authorMember = await upsertMember(boardRow.id, BigInt(sender.id), sender.username || null, sender.first_name);
     await db.insert(comments).values({
@@ -232,8 +265,7 @@ bot.on("message:text", async (ctx) => {
       authorId: authorMember.id,
       text: ctx.message.text,
     });
-    // Confirm with a reply
-    await ctx.reply(`Comment added to "${matchedTask.title}".`, {
+    await ctx.reply(`${botT("commentAdded", lang)} "${matchedTask.title}".`, {
       reply_parameters: { message_id: ctx.message.message_id },
     });
   } catch (e) {
@@ -241,7 +273,6 @@ bot.on("message:text", async (ctx) => {
   }
 });
 
-// Catch-all error handler
 bot.catch((err) => {
   console.error("Bot error:", err.message);
   console.error("Update that caused error:", JSON.stringify(err.ctx?.update));

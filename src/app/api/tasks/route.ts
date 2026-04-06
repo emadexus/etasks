@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthFromRequest, getAuthUser } from "@/lib/telegram/auth";
 import { getBoardByChatId, getMemberByTelegramId, upsertMember } from "@/lib/db/queries";
 import { db } from "@/lib/db";
-import { tasks, members, comments } from "@/lib/db/schema";
+import { tasks, members, comments, boards } from "@/lib/db/schema";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
-import { notifyGroup, notifyUser, formatNewTask } from "@/lib/telegram/notify";
+import { notifyGroup, notifyUser, formatNewTask, botT } from "@/lib/telegram/notify";
 import { scheduleReminders } from "@/lib/qstash/reminders";
 import type { InlineKeyboardMarkup } from "grammy/types";
 
@@ -50,7 +50,6 @@ export async function GET(req: NextRequest) {
     .where(and(...conditions))
     .orderBy(orderBy);
 
-  // Convert BigInt fields for JSON serialization
   const serialized = result.map((r) => ({
     ...r,
     assignee: r.assignee?.id ? {
@@ -78,6 +77,7 @@ export async function POST(req: NextRequest) {
     const board = await getBoardByChatId(BigInt(chatId));
     if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
 
+    const lang = board.language || "en";
     const member = await upsertMember(board.id, auth.userId, auth.username, auth.firstName);
 
     const dueDate = dateDue ? new Date(dateDue) : new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -103,18 +103,18 @@ export async function POST(req: NextRequest) {
       const assignee = await db.select().from(members).where(eq(members.id, assigneeId)).limit(1);
       if (assignee[0]) {
         assigneeUsername = assignee[0].username;
-        await notifyUser(assignee[0].telegramUserId, formatNewTask(title, priority || "medium", assigneeUsername, dueDate));
+        await notifyUser(assignee[0].telegramUserId, formatNewTask(title, priority || "medium", assigneeUsername, dueDate, lang));
       }
     }
 
     const taskKeyboard: InlineKeyboardMarkup = {
       inline_keyboard: [[
-        { text: "Open Task", url: `https://t.me/e_task_bot/open?startapp=task${task.id}` }
+        { text: botT("openTask", lang), url: `https://t.me/e_task_bot/open?startapp=task${task.id}` }
       ]]
     };
     await notifyGroup(
       board.telegramChatId,
-      formatNewTask(title, priority || "medium", assigneeUsername, dueDate),
+      formatNewTask(title, priority || "medium", assigneeUsername, dueDate, lang),
       taskKeyboard
     );
 

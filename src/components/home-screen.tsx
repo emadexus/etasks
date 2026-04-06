@@ -34,8 +34,8 @@ function FilterIcon({ color, glyph }: { color: string; glyph: string }) {
 }
 
 export function HomeScreen() {
-  const { ready, openTaskId } = useTelegram();
-  const { data: home } = useHome();
+  const { ready, openTaskId, userId } = useTelegram();
+  const { data: home, error: homeError } = useHome();
   const { data: deepLinkTask } = useTaskDetail(openTaskId);
 
   const [view, setView] = useState<ViewState>({ type: "home" });
@@ -66,6 +66,30 @@ export function HomeScreen() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p style={{ color: "var(--text-muted)" }}>{t("loading")}</p>
+      </div>
+    );
+  }
+
+  // Access denied: API returned 401/403
+  if (homeError) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+        <div className="mb-6 text-[64px]">🏔️</div>
+        <h1 className="mb-2 text-[20px] font-bold" style={{ color: "var(--text-primary)" }}>
+          eTask / Yeti
+        </h1>
+        <p className="mb-6 text-[14px]" style={{ color: "var(--text-muted)" }}>
+          {t("loading") === "Загрузка..."
+            ? "У вас нет доступа к этому приложению. Обратитесь к администратору."
+            : "You don't have access to this app. Contact the admin to request access."}
+        </p>
+        <a
+          href="https://t.me/emadex"
+          className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-[14px] font-semibold text-white"
+          style={{ background: "var(--accent-purple)" }}
+        >
+          @emadex
+        </a>
       </div>
     );
   }

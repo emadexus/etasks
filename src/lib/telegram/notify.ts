@@ -3,6 +3,49 @@ import type { InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, Fo
 
 type ReplyMarkup = InlineKeyboardMarkup | ReplyKeyboardMarkup | ReplyKeyboardRemove | ForceReply;
 
+// Bot-side notification translations
+const botStrings = {
+  en: {
+    newTask: "New task",
+    commentedOn: "commented on",
+    deadlineReminder: "Deadline reminder",
+    dueIn: "Due in",
+    commentAdded: "Comment added to",
+    boardCreated: "Board created for",
+    boardReady: "Task board is ready for",
+    openTaskBoard: "Open Task Board",
+    openTask: "Open Task",
+    startPrivate: "Start the bot privately for personal notifications.",
+    welcome: "Welcome to etasks! Add me to a group to create a task board.",
+    langSet: "Language set to",
+    langRu: "Russian",
+    langEn: "English",
+  },
+  ru: {
+    newTask: "Новая задача",
+    commentedOn: "прокомментировал(а)",
+    deadlineReminder: "Напоминание о дедлайне",
+    dueIn: "Осталось",
+    commentAdded: "Комментарий к задаче",
+    boardCreated: "Доска создана для",
+    boardReady: "Доска задач готова для",
+    openTaskBoard: "Открыть доску",
+    openTask: "Открыть задачу",
+    startPrivate: "Напишите боту лично для персональных уведомлений.",
+    welcome: "Добро пожаловать в etasks! Добавьте меня в группу для создания доски задач.",
+    langSet: "Язык установлен:",
+    langRu: "Русский",
+    langEn: "Английский",
+  },
+} as const;
+
+type BotStringKey = keyof typeof botStrings.en;
+
+export function botT(key: BotStringKey, lang: string = "en"): string {
+  const locale = lang in botStrings ? lang as keyof typeof botStrings : "en";
+  return botStrings[locale][key] || botStrings.en[key];
+}
+
 export async function notifyGroup(chatId: bigint, text: string, replyMarkup?: ReplyMarkup) {
   try {
     await bot.api.sendMessage(chatId.toString(), text, {
@@ -22,18 +65,21 @@ export async function notifyUser(userId: bigint, text: string) {
   }
 }
 
-export function formatNewTask(title: string, priority: string, assigneeUsername: string | null, deadline: Date) {
-  const assignee = assigneeUsername ? `@${assigneeUsername}` : "unassigned";
-  const due = deadline.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  return `<b>New task</b>\n${title}\n● ${priority} · ${assignee} · due ${due}`;
+export function formatNewTask(title: string, priority: string, assigneeUsername: string | null, deadline: Date | null, lang: string = "en") {
+  const assignee = assigneeUsername ? `@${assigneeUsername}` : (lang === "ru" ? "не назначен" : "unassigned");
+  const due = deadline
+    ? deadline.toLocaleDateString(lang === "ru" ? "ru-RU" : "en-US", { month: "short", day: "numeric" })
+    : "";
+  const dueStr = due ? ` · ${lang === "ru" ? "до" : "due"} ${due}` : "";
+  return `<b>${botT("newTask", lang)}</b>\n${title}\n● ${priority} · ${assignee}${dueStr}`;
 }
 
-export function formatComment(authorName: string, taskTitle: string, commentText: string) {
+export function formatComment(authorName: string, taskTitle: string, commentText: string, lang: string = "en") {
   const preview = commentText.length > 100 ? commentText.slice(0, 100) + "..." : commentText;
-  return `<b>${authorName}</b> commented on <b>${taskTitle}</b>\n<i>"${preview}"</i>`;
+  return `<b>${authorName}</b> ${botT("commentedOn", lang)} <b>${taskTitle}</b>\n<i>"${preview}"</i>`;
 }
 
-export function formatDeadlineReminder(taskTitle: string, timeLeft: string, assigneeUsername: string | null) {
+export function formatDeadlineReminder(taskTitle: string, timeLeft: string, assigneeUsername: string | null, lang: string = "en") {
   const assignee = assigneeUsername ? `@${assigneeUsername}` : "";
-  return `⏰ <b>Deadline reminder</b>\n${taskTitle}\nDue in ${timeLeft} ${assignee}`;
+  return `⏰ <b>${botT("deadlineReminder", lang)}</b>\n${taskTitle}\n${botT("dueIn", lang)} ${timeLeft} ${assignee}`;
 }

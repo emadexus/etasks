@@ -71,6 +71,14 @@ function revalidateProjects() {
   );
 }
 
+function revalidateAttachments() {
+  mutate(
+    (key: unknown) => typeof key === "string" && key.startsWith("/api/attachments"),
+    undefined,
+    { revalidate: true, populateCache: false }
+  );
+}
+
 const swrOpts = {
   revalidateOnFocus: false,
   shouldRetryOnError: true,
@@ -202,4 +210,35 @@ export function useProjectActions() {
       revalidateProjects();
     },
   }), [api]);
+}
+
+// ─── Attachments ───
+
+export function useAttachments(taskId: string | null) {
+  const fetcher = useAuthFetcher();
+  const authReady = useAuthReady();
+  return useSWR(authReady && taskId ? `/api/attachments?taskId=${taskId}` : null, fetcher, swrOpts);
+}
+
+export function useAttachmentActions() {
+  const { initData } = useTelegram();
+  const initDataRef = useRef(initData);
+  useEffect(() => { initDataRef.current = initData; }, [initData]);
+
+  return useMemo(() => ({
+    uploadFile: async (taskId: string, file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("taskId", taskId);
+
+      const res = await fetch("/api/attachments", {
+        method: "POST",
+        headers: initDataRef.current ? { "x-telegram-init-data": initDataRef.current } : {},
+        body: formData,
+      });
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      revalidateAttachments();
+      return res.json();
+    },
+  }), []);
 }

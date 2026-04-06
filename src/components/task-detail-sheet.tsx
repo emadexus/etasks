@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useTaskDetail, useComments, useTaskActions, useMembers } from "@/hooks/use-board";
+import { useTaskDetail, useComments, useTaskActions, useMembers, useAttachments, useAttachmentActions } from "@/hooks/use-board";
+import { useTelegram } from "./telegram-provider";
 import { CommentThread } from "./comment-thread";
 import { ReminderChips } from "./reminder-chips";
 import { CalendarPicker } from "./calendar-picker";
@@ -97,9 +98,10 @@ function AssigneePicker({ assignee, members, onChange }: {
   );
 }
 
-function formatDate(d: Date | null): string {
+function formatDate(d: Date | null, lang: string = "en"): string {
   if (!d) return t("notSet");
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  const locale = lang === "ru" ? "ru-RU" : "en-US";
+  return d.toLocaleDateString(locale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProps) {
@@ -107,6 +109,9 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
   const { data: commentsData, mutate: mutateComments } = useComments(taskId);
   const { data: membersData } = useMembers(chatId);
   const { updateTask, addComment } = useTaskActions(chatId);
+  const { data: attachmentsData, mutate: mutateAttachments } = useAttachments(taskId);
+  const { uploadFile } = useAttachmentActions();
+  const { lang } = useTelegram();
 
   const [localTask, setLocalTask] = useState<any>(null);
   const [localReminders, setLocalReminders] = useState<string[]>([]);
@@ -217,7 +222,7 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
                   {t("due")}
                 </div>
                 <div className="text-[13px]" style={{ color: isOverdue ? "var(--accent-red)" : "var(--text-primary)" }}>
-                  {formatDate(dateDue)}
+                  {formatDate(dateDue, lang)}
                 </div>
               </div>
               <div className="h-6" style={{ width: 1, background: "var(--border-separator)" }} />
@@ -226,7 +231,7 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
                   {t("planned")}
                 </div>
                 <div className="text-[13px]" style={{ color: "var(--text-primary)" }}>
-                  {formatDate(datePlanned)}
+                  {formatDate(datePlanned, lang)}
                 </div>
               </div>
             </div>
@@ -261,6 +266,61 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
               />
             </div>
           )}
+
+          {/* Attachments */}
+          <div className="mb-3">
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+                {lang === "ru" ? "Файлы" : "Files"}
+              </span>
+              <label
+                className="cursor-pointer rounded-lg px-2 py-1 text-[11px] font-medium transition-colors active:bg-white/5"
+                style={{ color: "var(--accent-blue)" }}
+              >
+                {lang === "ru" ? "Прикрепить" : "Attach"}
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file || !task.id) return;
+                    try {
+                      await uploadFile(task.id, file);
+                      mutateAttachments();
+                    } catch (err) {
+                      console.error("Upload failed:", err);
+                    }
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+            {attachmentsData && attachmentsData.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                {attachmentsData.map((att: any) => (
+                  <a
+                    key={att.id}
+                    href={att.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg px-2.5 py-2 transition-colors active:bg-white/5"
+                    style={{ background: "var(--bg-card)" }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="text-[14px]">📎</span>
+                    <span className="min-w-0 flex-1 truncate text-[12px]" style={{ color: "var(--text-primary)" }}>
+                      {att.fileName}
+                    </span>
+                    {att.fileSize && (
+                      <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+                        {att.fileSize > 1048576 ? `${(att.fileSize / 1048576).toFixed(1)}MB` : `${Math.round(att.fileSize / 1024)}KB`}
+                      </span>
+                    )}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
 
           {(isBoard || (commentsData && commentsData.length > 0)) && (
             <div className="border-t pt-3" style={{ borderColor: "var(--border-separator)" }}>

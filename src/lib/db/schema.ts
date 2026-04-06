@@ -12,6 +12,7 @@ export const boards = pgTable("boards", {
   id: uuid("id").defaultRandom().primaryKey(),
   telegramChatId: bigint("telegram_chat_id", { mode: "bigint" }).notNull().unique(),
   name: text("name").notNull(),
+  language: text("language").notNull().default("en"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -53,6 +54,7 @@ export const tasks = pgTable("tasks", {
   datePlanned: timestamp("date_planned"),
   notifyAt: timestamp("notify_at"),
   recurrenceRule: text("recurrence_rule"),
+  createdVia: text("created_via"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -63,6 +65,18 @@ export const comments = pgTable("comments", {
   taskId: uuid("task_id").notNull().references(() => tasks.id),
   authorId: uuid("author_id").notNull().references(() => members.id),
   text: text("text").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const taskAttachments = pgTable("task_attachments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  taskId: uuid("task_id").notNull().references(() => tasks.id),
+  fileName: text("file_name").notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileSize: bigint("file_size", { mode: "number" }),
+  mimeType: text("mime_type"),
+  uploadedById: uuid("uploaded_by_id").references(() => members.id),
+  uploadedByUserId: uuid("uploaded_by_user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

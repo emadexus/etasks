@@ -33,10 +33,35 @@ export function validateInitData(initData: string): { userId: bigint; username: 
   };
 }
 
+/** Check for admin API key in Authorization header. Returns admin identity if valid. */
+export function getAdminAuth(req: Request): { userId: bigint; username: string | null; firstName: string; isAdmin: true } | null {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+
+  const token = authHeader.slice(7);
+  const adminKey = process.env.ADMIN_API_KEY;
+  if (!adminKey || token !== adminKey) return null;
+
+  // Admin acts as the configured admin user
+  const adminTelegramId = BigInt(process.env.ADMIN_TELEGRAM_ID || "247463948");
+  const adminUsername = process.env.ADMIN_USERNAME || "emadex";
+  const adminFirstName = process.env.ADMIN_FIRST_NAME || "E";
+
+  return {
+    userId: adminTelegramId,
+    username: adminUsername,
+    firstName: adminFirstName,
+    isAdmin: true,
+  };
+}
+
 export function getAuthFromRequest(req: Request) {
+  // Check admin API key first
+  const adminAuth = getAdminAuth(req);
+  if (adminAuth) return adminAuth;
+
   const initData = req.headers.get("x-telegram-init-data");
   if (!initData) {
-    // Dev bypass: return a fake user in development mode
     if (process.env.NODE_ENV === "development") {
       return {
         userId: BigInt(process.env.DEV_TELEGRAM_USER_ID || "247463948"),
@@ -61,4 +86,11 @@ export async function getAuthUser(req: Request) {
 
   const user = await getOrCreateUser(auth.userId, auth.username, auth.firstName);
   return { ...auth, dbUserId: user.id };
+}
+
+/** Admin-only auth: returns admin identity with impersonation support. */
+export function getAdminOnlyAuth(req: Request) {
+  const adminAuth = getAdminAuth(req);
+  if (!adminAuth) return null;
+  return adminAuth;
 }
