@@ -64,7 +64,7 @@ export function HomeScreen() {
 
   if (!ready) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex h-full items-center justify-center">
         <p style={{ color: "var(--text-muted)" }}>{t("loading")}</p>
       </div>
     );
@@ -73,7 +73,7 @@ export function HomeScreen() {
   // Access denied: API returned 401/403
   if (homeError) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+      <div className="flex h-full flex-col items-center justify-center px-6 text-center">
         <div className="mb-6 text-[64px]">🏔️</div>
         <h1 className="mb-2 text-[20px] font-bold" style={{ color: "var(--text-primary)" }}>
           eTask / Yeti
@@ -107,7 +107,7 @@ export function HomeScreen() {
   const boardCount = boards?.length || 0;
 
   return (
-    <div className="mx-auto min-h-screen max-w-lg px-4 pb-24 pt-4">
+    <div className="app-scroll-container mx-auto max-w-lg px-4 pb-24 pt-6">
       {/* ── User header ── */}
       <div className="mb-5 flex items-center justify-between">
         <div className="flex items-center gap-2.5">

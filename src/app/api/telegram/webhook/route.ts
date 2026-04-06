@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { webhookCallback } from "grammy";
+import { webhookCallback, InputFile } from "grammy";
 import type { InlineKeyboardMarkup } from "grammy/types";
 import { bot } from "@/lib/telegram/bot";
 import { db } from "@/lib/db";
@@ -7,6 +7,19 @@ import { boards, members, tasks, comments } from "@/lib/db/schema";
 import { eq, and, like } from "drizzle-orm";
 import { notifyGroup, botT } from "@/lib/telegram/notify";
 import { upsertMember } from "@/lib/db/queries";
+
+const YETI_AVATAR_URL = "https://ooih.fra1.digitaloceanspaces.com/etasks/yeti_avatar.png";
+
+async function trySetChatPhoto(chatId: number | bigint) {
+  try {
+    const resp = await fetch(YETI_AVATAR_URL);
+    if (!resp.ok) return;
+    const buffer = Buffer.from(await resp.arrayBuffer());
+    await bot.api.setChatPhoto(Number(chatId), new InputFile(buffer, "yeti.png"));
+  } catch (e) {
+    console.log("setChatPhoto failed (bot may not be admin):", (e as Error).message);
+  }
+}
 
 function boardKeyboard(chatId: number | bigint, lang: string): InlineKeyboardMarkup {
   return {
@@ -31,7 +44,10 @@ bot.command("start", async (ctx) => {
 
   if (existing.length > 0) {
     const lang = existing[0].language || "en";
-    await ctx.reply(`${botT("boardReady", lang)} <b>${chat.title}</b>!`, {
+    const langHint = lang === "ru"
+      ? "\n\n🌐 Язык: Русский (смените: /lang en)"
+      : "\n\n🌐 Language: English (change: /lang ru)";
+    await ctx.reply(`${botT("boardReady", lang)} <b>${chat.title}</b>!${langHint}`, {
       parse_mode: "HTML",
       reply_markup: boardKeyboard(chat.id, lang),
     });
@@ -69,9 +85,15 @@ bot.command("start", async (ctx) => {
       }
     }
 
+    // Try to set group photo to Yeti avatar
+    await trySetChatPhoto(chat.id);
+
     const lang = newBoard.language || "en";
+    const langHint = lang === "ru"
+      ? "\n\n🌐 Язык: Русский (смените: /lang en)"
+      : "\n\n🌐 Language: English (change: /lang ru)";
     await ctx.reply(
-      `${botT("boardCreated", lang)} <b>${chat.title}</b>!\n${botT("startPrivate", lang)}`,
+      `${botT("boardCreated", lang)} <b>${chat.title}</b>!\n${botT("startPrivate", lang)}${langHint}`,
       { parse_mode: "HTML", reply_markup: boardKeyboard(chat.id, lang) }
     );
   }
@@ -121,6 +143,17 @@ bot.command("lang", async (ctx) => {
   await ctx.reply(`${botT("langSet", arg)} ${langName}`);
 });
 
+// Handle /setphoto command to manually update group avatar
+bot.command("setphoto", async (ctx) => {
+  const chat = ctx.chat;
+  if (chat.type !== "group" && chat.type !== "supergroup") {
+    await ctx.reply("This command works in groups only.");
+    return;
+  }
+  await trySetChatPhoto(chat.id);
+  await ctx.reply("✅");
+});
+
 // Handle bot being added to a group
 bot.on("my_chat_member", async (ctx) => {
   const chat = ctx.chat;
@@ -164,6 +197,9 @@ bot.on("my_chat_member", async (ctx) => {
     } catch (e) {
       console.error("Failed to sync members:", e);
     }
+
+    // Try to set group photo to Yeti avatar
+    await trySetChatPhoto(chat.id);
 
     await notifyGroup(BigInt(chat.id),
       `${botT("boardCreated", lang)} <b>${chat.title}</b> ✨\n${botT("startPrivate", lang)}`,

@@ -48,6 +48,10 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         if (tg.isVerticalSwipesEnabled !== undefined) tg.isVerticalSwipesEnabled = false;
         // Expand to full height
         if (tg.expand) tg.expand();
+        // Request full screen if available (Bot API 8.0+)
+        if (tg.requestFullscreen) {
+          try { tg.requestFullscreen(); } catch {}
+        }
         const initDataRaw = tg.initData || null;
         let chatId = new URLSearchParams(window.location.search).get("chatId");
         let openTaskId: string | null = null;

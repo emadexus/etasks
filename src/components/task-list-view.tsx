@@ -140,7 +140,7 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
   ];
 
   return (
-    <div className="mx-auto min-h-screen max-w-lg px-4 pb-8 pt-3">
+    <div className="app-scroll-container mx-auto max-w-lg px-4 pb-8 pt-3">
       <div className="mb-3 flex items-center gap-2">
         <button
           className="flex h-8 w-8 items-center justify-center rounded-lg text-[18px] transition-colors active:bg-white/5"
