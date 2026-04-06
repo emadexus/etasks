@@ -50,7 +50,16 @@ export async function GET(req: NextRequest) {
     .where(and(...conditions))
     .orderBy(orderBy);
 
-  return NextResponse.json({ tasks: result, board: { id: board.id, name: board.name } });
+  // Convert BigInt fields for JSON serialization
+  const serialized = result.map((r) => ({
+    ...r,
+    assignee: r.assignee?.id ? {
+      ...r.assignee,
+      telegramUserId: r.assignee.telegramUserId.toString(),
+    } : null,
+  }));
+
+  return NextResponse.json({ tasks: serialized, board: { id: board.id, name: board.name } });
 }
 
 export async function POST(req: NextRequest) {
