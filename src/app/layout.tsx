@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { TelegramProvider } from "@/components/telegram-provider";
+import { SWRProvider } from "@/components/swr-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
       </head>
       <body>
-        <TelegramProvider>{children}</TelegramProvider>
+        <SWRProvider>
+          <TelegramProvider>{children}</TelegramProvider>
+        </SWRProvider>
       </body>
     </html>
   );

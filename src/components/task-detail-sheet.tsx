@@ -285,17 +285,6 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
                 onClose();
               }}
             />
-            <span
-              className="cursor-pointer rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors active:opacity-70"
-              style={{ color: task.archivedAt ? "var(--accent-blue)" : "var(--text-dim)", background: task.archivedAt ? "var(--accent-blue)18" : "var(--text-dim)18" }}
-              onClick={async () => {
-                const val = task.archivedAt ? null : new Date().toISOString();
-                await handleUpdate("archivedAt", val);
-                if (val) onClose();
-              }}
-            >
-              {task.archivedAt ? t("unarchiveTask") : t("archiveTask")}
-            </span>
           </div>
 
           <button
@@ -420,6 +409,24 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
               />
             </div>
           )}
+
+          {/* Archive — placed at bottom, visually separated */}
+          <div className="mt-6 border-t pt-4" style={{ borderColor: "var(--border-separator)" }}>
+            <button
+              className="w-full rounded-xl py-2.5 text-center text-[12px] font-medium transition-colors active:opacity-70"
+              style={{
+                color: task.archivedAt ? "var(--accent-blue)" : "var(--text-dim)",
+                background: "var(--bg-card)",
+              }}
+              onClick={async () => {
+                const val = task.archivedAt ? null : new Date().toISOString();
+                await handleUpdate("archivedAt", val);
+                if (val) onClose();
+              }}
+            >
+              {task.archivedAt ? t("unarchiveTask") : t("archiveTask")}
+            </button>
+          </div>
         </div>
       </div>
 

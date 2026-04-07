@@ -40,6 +40,9 @@ body {
   -webkit-font-smoothing: antialiased;
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
+  /* Constrain to mobile-like width on desktop */
+  max-width: 480px;
+  margin: 0 auto;
 }
 
 #__next, main {
