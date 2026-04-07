@@ -77,7 +77,8 @@ export function HomeScreen() {
     }
   }, [openTaskId, deepLinkTask, boards]);
 
-  if (!ready) {
+  // Only show loading if we have NO cached data at all
+  if (!ready && !home) {
     return (
       <div className="flex h-full items-center justify-center">
         <p style={{ color: "var(--text-muted)" }}>{t("loading")}</p>

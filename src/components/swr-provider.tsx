@@ -3,9 +3,9 @@
 import { SWRConfig } from "swr";
 import type { ReactNode } from "react";
 
-function localStorageProvider() {
-  const CACHE_KEY = "etasks-swr-cache";
+const CACHE_KEY = "etasks-swr-cache";
 
+function localStorageProvider() {
   // Load cached data from localStorage on init
   let map: Map<string, any>;
   try {
@@ -15,18 +15,40 @@ function localStorageProvider() {
     map = new Map();
   }
 
-  // Save to localStorage before unload
-  if (typeof window !== "undefined") {
-    window.addEventListener("beforeunload", () => {
+  // Persist to localStorage on every write (debounced via proxy)
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  const saveToStorage = () => {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
       try {
-        // Only cache API responses, skip SWR internal keys
         const entries = Array.from(map.entries()).filter(
           ([key]) => typeof key === "string" && key.startsWith("/api/")
         );
         localStorage.setItem(CACHE_KEY, JSON.stringify(entries));
       } catch {
-        // localStorage full or unavailable — silently ignore
+        // localStorage full or unavailable
       }
+    }, 500);
+  };
+
+  // Wrap map.set to trigger saves
+  const originalSet = map.set.bind(map);
+  map.set = (key: string, value: any) => {
+    const result = originalSet(key, value);
+    saveToStorage();
+    return result;
+  };
+
+  // Also save on beforeunload as fallback
+  if (typeof window !== "undefined") {
+    window.addEventListener("beforeunload", () => {
+      if (saveTimer) clearTimeout(saveTimer);
+      try {
+        const entries = Array.from(map.entries()).filter(
+          ([key]) => typeof key === "string" && key.startsWith("/api/")
+        );
+        localStorage.setItem(CACHE_KEY, JSON.stringify(entries));
+      } catch {}
     });
   }
 

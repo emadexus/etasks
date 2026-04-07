@@ -95,41 +95,53 @@ const swrOpts = {
   dedupingInterval: 0,
 };
 
+// Paused SWR options: always provide the key (for cache hits),
+// but pause fetching until auth is ready. This lets localStorage
+// cache return data instantly on app open.
+function usePausedOpts(extraOpts?: Record<string, any>) {
+  const authReady = useAuthReady();
+  return useMemo(() => ({
+    ...swrOpts,
+    ...extraOpts,
+    isPaused: () => !authReady,
+  }), [authReady]);
+}
+
 // ─── Existing board-scoped hooks ───
 
 export function useMembers(chatId: string | null) {
   const fetcher = useAuthFetcher();
-  const authReady = useAuthReady();
-  return useSWR(authReady && chatId ? `/api/members?chatId=${chatId}` : null, fetcher, swrOpts);
+  const opts = usePausedOpts();
+  return useSWR(chatId ? `/api/members?chatId=${chatId}` : null, fetcher, opts);
 }
 
 export function useTasks(chatId: string | null, filters?: Record<string, string>) {
   const fetcher = useAuthFetcher();
-  const authReady = useAuthReady();
+  const opts = usePausedOpts({ keepPreviousData: true });
   const key = useMemo(() => {
-    if (!authReady || !chatId) return null;
+    if (!chatId) return null;
     const params = new URLSearchParams({ chatId, ...filters });
     return `/api/tasks?${params}`;
-  }, [authReady, chatId, filters]);
-  return useSWR(key, fetcher, { ...swrOpts, keepPreviousData: true });
+  }, [chatId, filters]);
+  return useSWR(key, fetcher, opts);
 }
 
 export function useTaskDetail(taskId: string | null) {
   const fetcher = useAuthFetcher();
-  const authReady = useAuthReady();
-  return useSWR(authReady && taskId ? `/api/tasks/${taskId}` : null, fetcher, { ...swrOpts, keepPreviousData: true });
+  const opts = usePausedOpts({ keepPreviousData: true });
+  return useSWR(taskId ? `/api/tasks/${taskId}` : null, fetcher, opts);
 }
 
 export function useComments(taskId: string | null) {
   const fetcher = useAuthFetcher();
-  const authReady = useAuthReady();
-  return useSWR(authReady && taskId ? `/api/comments?taskId=${taskId}` : null, fetcher, { ...swrOpts, keepPreviousData: true });
+  const opts = usePausedOpts({ keepPreviousData: true });
+  return useSWR(taskId ? `/api/comments?taskId=${taskId}` : null, fetcher, opts);
 }
 
 export function useBoards() {
   const fetcher = useAuthFetcher();
-  const authReady = useAuthReady();
-  return useSWR(authReady ? "/api/boards" : null, fetcher, swrOpts);
+  const opts = usePausedOpts();
+  return useSWR("/api/boards", fetcher, opts);
 }
 
 export function useTaskActions(chatId: string | null) {
@@ -172,39 +184,39 @@ export function useTaskActions(chatId: string | null) {
 /** Combined home data: user + counts + boards + projects in one request. */
 export function useHome() {
   const fetcher = useAuthFetcher();
-  const authReady = useAuthReady();
-  return useSWR(authReady ? "/api/home" : null, fetcher, swrOpts);
+  const opts = usePausedOpts();
+  return useSWR("/api/home", fetcher, opts);
 }
 
 export function useUser() {
   const fetcher = useAuthFetcher();
-  const authReady = useAuthReady();
-  return useSWR(authReady ? "/api/user" : null, fetcher, swrOpts);
+  const opts = usePausedOpts();
+  return useSWR("/api/user", fetcher, opts);
 }
 
 export function useSmartFilterCounts() {
   const fetcher = useAuthFetcher();
-  const authReady = useAuthReady();
-  return useSWR(authReady ? "/api/user/counts" : null, fetcher, swrOpts);
+  const opts = usePausedOpts();
+  return useSWR("/api/user/counts", fetcher, opts);
 }
 
 export function useFilteredTasks(filter: string, projectId?: string, chatId?: string) {
   const fetcher = useAuthFetcher();
-  const authReady = useAuthReady();
+  const opts = usePausedOpts({ keepPreviousData: true });
   const key = useMemo(() => {
-    if (!authReady || !filter) return null;
+    if (!filter) return null;
     const params = new URLSearchParams({ filter });
     if (projectId) params.set("projectId", projectId);
     if (chatId) params.set("chatId", chatId);
     return `/api/user/tasks?${params}`;
-  }, [authReady, filter, projectId, chatId]);
-  return useSWR(key, fetcher, { ...swrOpts, keepPreviousData: true });
+  }, [filter, projectId, chatId]);
+  return useSWR(key, fetcher, opts);
 }
 
 export function useProjects() {
   const fetcher = useAuthFetcher();
-  const authReady = useAuthReady();
-  return useSWR(authReady ? "/api/projects" : null, fetcher, swrOpts);
+  const opts = usePausedOpts();
+  return useSWR("/api/projects", fetcher, opts);
 }
 
 export function useProjectActions() {
