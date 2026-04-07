@@ -177,7 +177,7 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
       </div>
 
       <div className="flex flex-col gap-1.5">
-        {isLoading && (
+        {isLoading && sortedTasks.length === 0 && (
           <p className="py-12 text-center text-[13px]" style={{ color: "var(--text-muted)" }}>{t("loadingTasks")}</p>
         )}
         {!isLoading && sortedTasks.length === 0 && (
@@ -198,8 +198,9 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
             assignee={item.assignee}
             commentCount={item.commentCount || 0}
             onTap={setSelectedTaskId}
-            onToggleStatus={async (id, newStatus) => {
-              await updateTask(id, { status: newStatus });
+            onToggleStatus={(id, newStatus) => {
+              // Optimistic: update local item immediately, then sync in background
+              updateTask(id, { status: newStatus });
             }}
           />
         ))}

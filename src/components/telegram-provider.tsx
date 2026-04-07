@@ -49,8 +49,10 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         // Prevent accidental close by scroll
         if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
         if (tg.isVerticalSwipesEnabled !== undefined) tg.isVerticalSwipesEnabled = false;
-        // Expand to full height (within Telegram's Mini App viewport, not browser fullscreen)
-        if (tg.expand) tg.expand();
+        // Expand to full height only on mobile — desktop fullscreen is disruptive
+        const platform = tg.platform || "";
+        const isMobile = /android|ios/i.test(platform);
+        if (isMobile && tg.expand) tg.expand();
         const initDataRaw = tg.initData || null;
         let chatId = new URLSearchParams(window.location.search).get("chatId");
         let openTaskId: string | null = null;

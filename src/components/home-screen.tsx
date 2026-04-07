@@ -20,7 +20,7 @@ const smartFilters = [
   { key: "tomorrow",  labelKey: "tomorrow" as const,  color: "#f87171", icon: "sunrise" as const },
   { key: "next7days", labelKey: "next7days" as const, color: "#6366f1", icon: "calendar" as const },
   { key: "completed", labelKey: "completed" as const, color: "#34d399", icon: "check" as const },
-  { key: "archived",  labelKey: "archived" as const,  color: "#6e6879", icon: "archive" as const },
+  // "archived" hidden from home — accessible only via task-detail sheet
 ];
 
 function FilterIcon({ color, icon }: { color: string; icon: string }) {
@@ -156,8 +156,8 @@ export function HomeScreen() {
     }
   }, [openTaskId, deepLinkTask, boards]);
 
-  // Only show loading if we have NO cached data at all
-  if (!ready && !home) {
+  // Only show loading if we have NO cached data and auth isn't ready yet
+  if (!home && !ready) {
     return (
       <div className="flex h-full items-center justify-center">
         <p style={{ color: "var(--text-muted)" }}>{t("loading")}</p>
@@ -165,8 +165,8 @@ export function HomeScreen() {
     );
   }
 
-  // Access denied: API returned 401/403
-  if (homeError) {
+  // Access denied: only show after auth is ready AND fetch actually failed (not just loading)
+  if (homeError && ready && !home) {
     return (
       <div className="flex h-full flex-col items-center justify-center px-6 text-center">
         <div className="mb-6 text-[64px]">🏔️</div>

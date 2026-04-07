@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTaskDetail, useComments, useTaskActions, useMembers, useAttachments, useAttachmentActions, useHome } from "@/hooks/use-board";
 import { useTelegram } from "./telegram-provider";
 import { CommentThread } from "./comment-thread";
@@ -54,22 +54,33 @@ function AssigneePicker({ assignee, members, onChange }: {
   onChange: (memberId: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const triggerRef = useRef<HTMLSpanElement>(null);
+
+  const handleOpen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+    setOpen(!open);
+  };
 
   return (
-    <span className="relative inline-block">
+    <span className="relative inline-block" ref={triggerRef}>
       <span
         className="cursor-pointer text-[11px] font-medium transition-colors active:opacity-70"
         style={{ color: assignee ? "var(--accent-blue)" : "var(--text-dim)" }}
-        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+        onClick={handleOpen}
       >
         {assignee ? `@${assignee.username || assignee.firstName}` : t("unassigned")}
       </span>
-      {open && (
+      {open && pos && (
         <>
           <div className="fixed inset-0 z-[55]" onClick={() => setOpen(false)} />
           <div
-            className="absolute left-0 top-full z-[60] mt-1 min-w-[160px] overflow-hidden rounded-xl p-1 shadow-xl"
-            style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-card)" }}
+            className="fixed z-[60] min-w-[160px] overflow-hidden rounded-xl p-1 shadow-xl"
+            style={{ top: pos.top, right: pos.right, background: "var(--bg-secondary)", border: "1px solid var(--border-card)" }}
           >
             <button
               className="block w-full rounded-lg px-3 py-2 text-left text-[12px] transition-colors active:bg-white/5"
@@ -105,26 +116,37 @@ function BoardPicker({ currentBoardId, boards, onMove }: {
   onMove: (boardId: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const triggerRef = useRef<HTMLSpanElement>(null);
 
   const currentLabel = currentBoardId
     ? boards.find(b => b.id === currentBoardId)?.name || "?"
     : t("personalInbox");
 
+  const handleOpen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+    setOpen(!open);
+  };
+
   return (
-    <span className="relative inline-block">
+    <span className="relative inline-block" ref={triggerRef}>
       <span
         className="cursor-pointer rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors active:opacity-70"
         style={{ color: "var(--accent-orange)", background: "var(--accent-orange)18" }}
-        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+        onClick={handleOpen}
       >
         {currentLabel} ›
       </span>
-      {open && (
+      {open && pos && (
         <>
           <div className="fixed inset-0 z-[55]" onClick={() => setOpen(false)} />
           <div
-            className="absolute left-0 top-full z-[60] mt-1 min-w-[180px] overflow-hidden rounded-xl p-1 shadow-xl"
-            style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-card)" }}
+            className="fixed z-[60] min-w-[180px] overflow-hidden rounded-xl p-1 shadow-xl"
+            style={{ top: pos.top, right: pos.right, background: "var(--bg-secondary)", border: "1px solid var(--border-card)" }}
           >
             {/* Personal inbox option */}
             {currentBoardId !== null && (
@@ -209,7 +231,11 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
     setPendingUpdates(n => n + 1);
 
     updateTask(localTask?.id || taskId!, { [field]: value })
-      .then(() => { setPendingUpdates(n => n - 1); mutateTask(); })
+      .then(() => {
+        setPendingUpdates(n => n - 1);
+        // Optimistic: update SWR cache with the new value to avoid old→new flash
+        mutateTask((current: any) => current ? { ...current, task: { ...current.task, [field]: value } } : current, { revalidate: true });
+      })
       .catch((e) => { console.error(e); setPendingUpdates(n => n - 1); setSaving(false); });
   }, [localTask, taskId, updateTask, mutateTask]);
 
@@ -451,23 +477,49 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
             </div>
           )}
 
-          {/* Archive — placed at bottom, visually separated */}
+          {/* Actions — share + archive */}
           <div className="mt-6 border-t pt-4" style={{ borderColor: "var(--border-separator)" }}>
-            <button
-              className="w-full rounded-xl py-2.5 text-center text-[12px] font-medium transition-colors active:opacity-70"
-              style={{
-                color: task.archivedAt ? "var(--accent-blue)" : "var(--text-dim)",
-                background: "var(--bg-card)",
-              }}
-              onClick={async () => {
-                const val = task.archivedAt ? null : new Date().toISOString();
-                await handleUpdate("archivedAt", val);
-                showToast(val ? t("taskArchived") : t("taskUnarchived"));
-                if (val) onClose();
-              }}
-            >
-              {task.archivedAt ? t("unarchiveTask") : t("archiveTask")}
-            </button>
+            <div className="flex gap-2">
+              <button
+                className="flex-1 rounded-xl py-2.5 text-center text-[12px] font-medium transition-colors active:opacity-70"
+                style={{ color: "var(--accent-blue)", background: "var(--bg-card)" }}
+                onClick={() => {
+                  const botUsername = process.env.NEXT_PUBLIC_BOT_USERNAME || "e_task_bot";
+                  const link = `https://t.me/${botUsername}/app?startapp=task${task.id}`;
+                  if (navigator.clipboard?.writeText) {
+                    navigator.clipboard.writeText(link).then(() => showToast(lang === "ru" ? "Ссылка скопирована" : "Link copied"));
+                  } else {
+                    // Fallback for Telegram WebView
+                    const ta = document.createElement("textarea");
+                    ta.value = link;
+                    ta.style.position = "fixed";
+                    ta.style.opacity = "0";
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(ta);
+                    showToast(lang === "ru" ? "Ссылка скопирована" : "Link copied");
+                  }
+                }}
+              >
+                {lang === "ru" ? "Скопировать ссылку" : "Copy link"}
+              </button>
+              <button
+                className="flex-1 rounded-xl py-2.5 text-center text-[12px] font-medium transition-colors active:opacity-70"
+                style={{
+                  color: task.archivedAt ? "var(--accent-blue)" : "var(--text-dim)",
+                  background: "var(--bg-card)",
+                }}
+                onClick={async () => {
+                  const val = task.archivedAt ? null : new Date().toISOString();
+                  await handleUpdate("archivedAt", val);
+                  showToast(val ? t("taskArchived") : t("taskUnarchived"));
+                  if (val) onClose();
+                }}
+              >
+                {task.archivedAt ? t("unarchiveTask") : t("archiveTask")}
+              </button>
+            </div>
           </div>
         </div>
       </div>
