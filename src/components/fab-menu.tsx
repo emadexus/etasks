@@ -114,16 +114,21 @@ export function FabMenu({ onNewTask, onNewProject, projectCount, projectLimit }:
       )}
 
       <button
-        className="fixed bottom-5 right-5 z-[80] flex h-[52px] w-[52px] items-center justify-center rounded-full shadow-lg transition-all active:scale-90"
+        className="fixed bottom-5 right-5 z-[80] flex h-[46px] items-center gap-1.5 rounded-full px-5 shadow-lg transition-all active:scale-95"
         style={{ background: "var(--accent-purple)" }}
         onClick={() => { setOpen(!open); setShowProjectInput(false); }}
       >
         <span
-          className="text-[24px] font-light text-white transition-transform duration-200"
+          className="text-[20px] font-light text-white transition-transform duration-200"
           style={{ transform: open ? "rotate(45deg)" : "none" }}
         >
           +
         </span>
+        {!open && (
+          <span className="text-[13px] font-semibold text-white">
+            {t("newTask")}
+          </span>
+        )}
       </button>
     </>
   );

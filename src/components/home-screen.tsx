@@ -140,6 +140,50 @@ export function HomeScreen() {
         </div>
       </div>
 
+      {/* ── Widget cards ── */}
+      {counts && (
+        <div className="mb-4 flex gap-2.5">
+          <button
+            className="flex flex-1 flex-col rounded-xl px-3.5 py-3 transition-colors active:bg-white/5"
+            style={{ background: "rgba(48, 209, 88, 0.08)", border: "1px solid rgba(48, 209, 88, 0.12)" }}
+            onClick={() => setView({ type: "filter", filter: "today", label: t("today") })}
+          >
+            <span className="text-[22px] font-bold" style={{ color: "var(--accent-green)" }}>
+              {counts.today ?? 0}
+            </span>
+            <span className="text-[12px] font-medium" style={{ color: "var(--accent-green)" }}>
+              {t("today")}
+            </span>
+          </button>
+          <button
+            className="flex flex-1 flex-col rounded-xl px-3.5 py-3 transition-colors active:bg-white/5"
+            style={{ background: "rgba(255, 149, 0, 0.08)", border: "1px solid rgba(255, 149, 0, 0.12)" }}
+            onClick={() => setView({ type: "filter", filter: "inbox", label: t("inbox") })}
+          >
+            <span className="text-[22px] font-bold" style={{ color: "var(--accent-orange)" }}>
+              {counts.inbox ?? 0}
+            </span>
+            <span className="text-[12px] font-medium" style={{ color: "var(--accent-orange)" }}>
+              {t("inbox")}
+            </span>
+          </button>
+          {(counts.all - counts.today - counts.inbox) > 0 && (
+            <button
+              className="flex flex-1 flex-col rounded-xl px-3.5 py-3 transition-colors active:bg-white/5"
+              style={{ background: "rgba(88, 86, 214, 0.08)", border: "1px solid rgba(88, 86, 214, 0.12)" }}
+              onClick={() => setView({ type: "filter", filter: "all", label: t("all") })}
+            >
+              <span className="text-[22px] font-bold" style={{ color: "var(--accent-blue)" }}>
+                {counts.all ?? 0}
+              </span>
+              <span className="text-[12px] font-medium" style={{ color: "var(--accent-blue)" }}>
+                {t("all")}
+              </span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ── Add to group chat ── */}
       <button
         className="mb-px flex w-full items-center gap-3 rounded-t-xl px-3.5 py-3"

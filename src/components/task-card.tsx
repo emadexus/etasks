@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { t } from "@/lib/i18n";
 
 interface TaskCardProps {
@@ -21,6 +22,12 @@ interface TaskCardProps {
   onToggleStatus: (id: string, newStatus: string) => void;
 }
 
+const priorityStripe: Record<string, string> = {
+  high: "var(--accent-orange)",
+  medium: "var(--accent-yellow)",
+  low: "transparent",
+};
+
 function getPriorityConfig(priority: string) {
   switch (priority) {
     case "high": return { label: t("priorityHigh"), color: "var(--accent-orange)", bg: "var(--accent-orange-bg)" };
@@ -40,36 +47,50 @@ function relativeDate(date: string): { text: string; urgent: boolean } {
 }
 
 export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }: TaskCardProps) {
+  const [animating, setAnimating] = useState(false);
   const isDone = task.status === "done";
   const isInProgress = task.status === "in_progress";
   const priority = getPriorityConfig(task.priority);
 
   const dueInfo = task.dateDue ? relativeDate(task.dateDue) : null;
   const plannedInfo = task.datePlanned ? relativeDate(task.datePlanned) : null;
+  const stripe = priorityStripe[task.priority] || "transparent";
+  const isOverdue = dueInfo?.urgent && task.status !== "done";
 
   return (
     <div
-      className={`rounded-xl px-3 py-2.5 transition-all active:scale-[0.98] ${isDone ? "opacity-40" : ""}`}
-      style={{ background: "var(--bg-card)" }}
+      className={`flex overflow-hidden rounded-xl transition-all active:scale-[0.98] ${isDone ? "opacity-40" : ""}`}
+      style={{
+        background: isOverdue ? "rgba(255, 69, 58, 0.06)" : "var(--bg-card)",
+      }}
       onClick={() => onTap(task.id)}
     >
-      <div className="flex items-start gap-2.5">
+      {/* Priority stripe */}
+      <div className="w-[3px] flex-shrink-0" style={{ background: isDone ? "transparent" : stripe }} />
+
+      <div className="flex flex-1 items-start gap-2.5 px-3 py-2.5">
+        {/* Checkbox — 24px, with bounce animation */}
         <button
-          className="mt-0.5 flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-full"
+          className={`mt-px flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full transition-all ${animating ? "animate-check" : ""}`}
           style={{
-            border: isDone ? "none" : `1.5px solid ${isInProgress ? "var(--accent-blue)" : "var(--text-dim)"}`,
+            border: isDone ? "none" : `2px solid ${isInProgress ? "var(--accent-blue)" : "var(--text-dim)"}`,
             background: isDone ? "var(--accent-green)" : "transparent",
           }}
           onClick={(e) => {
             e.stopPropagation();
+            setAnimating(true);
+            setTimeout(() => setAnimating(false), 300);
             const next = isDone ? "todo" : task.status === "todo" ? "in_progress" : "done";
             onToggleStatus(task.id, next);
           }}
         >
-          {isInProgress && <div className="h-2 w-2 rounded-full" style={{ background: "var(--accent-blue)" }} />}
-          {isDone && <span className="text-[10px] font-bold text-white">✓</span>}
+          {isInProgress && (
+            <div className="h-3 w-3 rounded-full" style={{ background: "var(--accent-blue)", opacity: 0.7 }} />
+          )}
+          {isDone && <span className="text-[11px] font-bold text-white">✓</span>}
         </button>
 
+        {/* Content */}
         <div className="min-w-0 flex-1">
           <div
             className={`text-[13px] font-medium leading-snug ${isDone ? "line-through" : ""}`}
@@ -79,43 +100,39 @@ export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }
           </div>
           {!isDone && (
             <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              <span
-                className="rounded px-1.5 py-px text-[10px] font-medium"
-                style={{ color: priority.color, background: priority.bg }}
-              >
-                {priority.label}
-              </span>
               {assignee && (
-                <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                  {assignee.firstName.toLowerCase()}
-                </span>
+                <div className="flex items-center gap-1">
+                  <div
+                    className="flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold"
+                    style={{ background: "var(--accent-blue-bg)", color: "var(--accent-blue)" }}
+                  >
+                    {assignee.firstName[0].toUpperCase()}
+                  </div>
+                  <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                    {assignee.firstName.toLowerCase()}
+                  </span>
+                </div>
               )}
               {dueInfo && (
-                <>
-                  <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>·</span>
-                  <span
-                    className="text-[10px]"
-                    style={{ color: dueInfo.urgent ? "var(--accent-red)" : "var(--text-muted)" }}
-                  >
-                    {t("duePrefix")} {dueInfo.text}
-                  </span>
-                </>
+                <span
+                  className="rounded px-1.5 py-px text-[10px] font-medium"
+                  style={{
+                    color: dueInfo.urgent ? "#fff" : "var(--text-muted)",
+                    background: dueInfo.urgent ? "var(--accent-red)" : "transparent",
+                  }}
+                >
+                  {dueInfo.text}
+                </span>
               )}
               {plannedInfo && !dueInfo && (
-                <>
-                  <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>·</span>
-                  <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                    {t("plannedPrefix")} {plannedInfo.text}
-                  </span>
-                </>
+                <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+                  {t("plannedPrefix")} {plannedInfo.text}
+                </span>
               )}
               {commentCount > 0 && (
-                <>
-                  <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>·</span>
-                  <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                    💬 {commentCount}
-                  </span>
-                </>
+                <span className="text-[10px]" style={{ color: "var(--text-dim)" }}>
+                  💬 {commentCount}
+                </span>
               )}
             </div>
           )}

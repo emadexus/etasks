@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { TelegramProvider } from "@/components/telegram-provider";
 import { SWRProvider } from "@/components/swr-provider";
+import { ToastProvider } from "@/components/toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -25,7 +26,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <SWRProvider>
-          <TelegramProvider>{children}</TelegramProvider>
+          <TelegramProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </TelegramProvider>
         </SWRProvider>
       </body>
     </html>

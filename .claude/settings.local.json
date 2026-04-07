@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s 'http://localhost:3000/api/tasks?chatId=-4929114614')",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\);const j=JSON.parse\\(d\\);if\\(j.tasks?.[0]\\) console.log\\('task fields:', Object.keys\\(j.tasks[0].task\\).join\\(', '\\)\\)\")",
+      "Bash(curl -s 'http://localhost:3000/api/members?chatId=-4929114614')",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\);const j=JSON.parse\\(d\\);if\\(j[0]\\) console.log\\('member fields:', Object.keys\\(j[0]\\).join\\(', '\\)\\)\")",
+      "Bash(pnpm build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)"
+    ]
+  }
+}

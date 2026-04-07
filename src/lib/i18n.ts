@@ -115,6 +115,28 @@ const translations = {
     personalInbox: "Personal inbox",
     moveTo: "Move",
     taskMoved: "Moved!",
+
+    // Toast
+    taskCreated: "Task created",
+    saved: "Saved",
+    taskArchived: "Task archived",
+    taskUnarchived: "Task restored",
+
+    // Empty states
+    emptyInboxTitle: "All clear!",
+    emptyInboxSubtitle: "Create your first task to get started",
+    emptyBoardTitle: "No tasks yet",
+    emptyBoardSubtitle: "Add a task to this board",
+
+    // Home widgets
+    overdueCount: "overdue",
+    tasksCount: "tasks",
+
+    // Detail fields
+    statusLabel: "Status",
+    priorityLabel: "Priority",
+    assigneeLabel: "Assignee",
+    boardLabel: "Board",
   },
   ru: {
     // General
@@ -232,6 +254,28 @@ const translations = {
     personalInbox: "Личные входящие",
     moveTo: "Переместить",
     taskMoved: "Перемещено!",
+
+    // Toast
+    taskCreated: "Задача создана",
+    saved: "Сохранено",
+    taskArchived: "Задача в архиве",
+    taskUnarchived: "Задача восстановлена",
+
+    // Empty states
+    emptyInboxTitle: "Всё чисто!",
+    emptyInboxSubtitle: "Создайте первую задачу",
+    emptyBoardTitle: "Задач пока нет",
+    emptyBoardSubtitle: "Добавьте задачу на эту доску",
+
+    // Home widgets
+    overdueCount: "просрочено",
+    tasksCount: "задач",
+
+    // Detail fields
+    statusLabel: "Статус",
+    priorityLabel: "Приоритет",
+    assigneeLabel: "Исполнитель",
+    boardLabel: "Доска",
   },
 } as const;
 

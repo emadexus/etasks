@@ -6,6 +6,7 @@ import { useTelegram } from "./telegram-provider";
 import { CommentThread } from "./comment-thread";
 import { ReminderChips } from "./reminder-chips";
 import { CalendarPicker } from "./calendar-picker";
+import { useToast } from "./toast";
 import { t } from "@/lib/i18n";
 
 interface TaskDetailSheetProps {
@@ -178,6 +179,7 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
   const { data: attachmentsData, mutate: mutateAttachments } = useAttachments(taskId);
   const { uploadFile } = useAttachmentActions();
   const { data: homeData } = useHome();
+  const { showToast } = useToast();
   const { lang } = useTelegram();
 
   const [localTask, setLocalTask] = useState<any>(null);
@@ -266,25 +268,64 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
             onBlur={() => description !== (task.description || "") && handleUpdate("description", description)}
           />
 
-          <div className="mb-3 flex flex-wrap items-center gap-1.5">
-            <CycleLabel value={task.status} map={statusMap} onCycle={(next) => handleUpdate("status", next)} />
-            <CycleLabel value={task.priority} map={priorityMap} onCycle={(next) => handleUpdate("priority", next)} />
+          {/* Field rows — iOS Settings style */}
+          <div className="mb-3 overflow-hidden rounded-xl" style={{ background: "var(--bg-card)" }}>
+            {/* Status */}
+            <div
+              className="flex items-center justify-between px-3.5 py-2.5 transition-colors active:bg-white/5"
+              style={{ cursor: "pointer" }}
+              onClick={() => handleUpdate("status", statusMap[task.status]?.next || "todo")}
+            >
+              <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>{t("statusLabel")}</span>
+              <span className="text-[13px] font-medium" style={{ color: statusMap[task.status]?.color }}>
+                {statusMap[task.status]?.label} ›
+              </span>
+            </div>
+
+            <div style={{ borderTop: "1px solid var(--border-separator)" }} />
+
+            {/* Priority */}
+            <div
+              className="flex items-center justify-between px-3.5 py-2.5 transition-colors active:bg-white/5"
+              style={{ cursor: "pointer" }}
+              onClick={() => handleUpdate("priority", priorityMap[task.priority]?.next || "medium")}
+            >
+              <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>{t("priorityLabel")}</span>
+              <span className="text-[13px] font-medium" style={{ color: priorityMap[task.priority]?.color }}>
+                {priorityMap[task.priority]?.label} ›
+              </span>
+            </div>
+
+            {/* Assignee — only for board tasks */}
             {isBoard && (
-              <AssigneePicker
-                assignee={assignee}
-                members={membersData || []}
-                onChange={(id) => handleUpdate("assigneeId", id)}
-              />
+              <>
+                <div style={{ borderTop: "1px solid var(--border-separator)" }} />
+                <div className="flex items-center justify-between px-3.5 py-2.5">
+                  <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>{t("assigneeLabel")}</span>
+                  <AssigneePicker
+                    assignee={assignee}
+                    members={membersData || []}
+                    onChange={(id) => handleUpdate("assigneeId", id)}
+                  />
+                </div>
+              </>
             )}
-            <BoardPicker
-              currentBoardId={task.boardId}
-              boards={homeData?.boards || []}
-              onMove={async (newBoardId) => {
-                await moveTask(task.id, newBoardId);
-                mutateTask();
-                onClose();
-              }}
-            />
+
+            <div style={{ borderTop: "1px solid var(--border-separator)" }} />
+
+            {/* Board */}
+            <div className="flex items-center justify-between px-3.5 py-2.5">
+              <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>{t("boardLabel")}</span>
+              <BoardPicker
+                currentBoardId={task.boardId}
+                boards={homeData?.boards || []}
+                onMove={async (newBoardId) => {
+                  await moveTask(task.id, newBoardId);
+                  mutateTask();
+                  onClose();
+                }}
+              />
+            </div>
           </div>
 
           <button
@@ -421,6 +462,7 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
               onClick={async () => {
                 const val = task.archivedAt ? null : new Date().toISOString();
                 await handleUpdate("archivedAt", val);
+                showToast(val ? t("taskArchived") : t("taskUnarchived"));
                 if (val) onClose();
               }}
             >

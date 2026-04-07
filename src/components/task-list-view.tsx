@@ -6,6 +6,7 @@ import { useFilteredTasks, useTasks, useMembers, useTaskActions, useUser } from 
 import { TaskCard } from "./task-card";
 import { QuickAdd } from "./quick-add";
 import { TaskDetailSheet } from "./task-detail-sheet";
+import { useToast } from "./toast";
 import { t } from "@/lib/i18n";
 
 interface TaskListViewProps {
@@ -37,8 +38,8 @@ function TabBar({ tabs, active, onChange }: {
           <span
             className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold"
             style={{
-              background: active === tab.key ? "var(--accent-red)" : "var(--text-dim)",
-              color: "#fff",
+              background: active === tab.key ? "var(--accent-purple)" : "rgba(255,255,255,0.08)",
+              color: active === tab.key ? "#fff" : "var(--text-muted)",
             }}
           >
             {tab.count}
@@ -59,6 +60,7 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(openTaskId || null);
   const [subTab, setSubTab] = useState<SubTab>("all");
   const { userId } = useTelegram();
+  const { showToast } = useToast();
   const { data: userData } = useUser();
 
   const isBoard = context.type === "board";
@@ -169,6 +171,7 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
                 projectId: projectId,
               });
             }
+            showToast(t("taskCreated"));
           }}
         />
       </div>
@@ -178,9 +181,15 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
           <p className="py-12 text-center text-[13px]" style={{ color: "var(--text-muted)" }}>{t("loadingTasks")}</p>
         )}
         {!isLoading && sortedTasks.length === 0 && (
-          <p className="py-12 text-center text-[13px]" style={{ color: "var(--text-muted)" }}>
-            {t("noTasksYet")}
-          </p>
+          <div className="flex flex-col items-center py-16 text-center">
+            <div className="mb-4 text-[48px]">📭</div>
+            <div className="text-[15px] font-semibold" style={{ color: "var(--text-primary)" }}>
+              {isBoard ? t("emptyBoardTitle") : t("emptyInboxTitle")}
+            </div>
+            <div className="mt-1 text-[13px]" style={{ color: "var(--text-muted)" }}>
+              {isBoard ? t("emptyBoardSubtitle") : t("emptyInboxSubtitle")}
+            </div>
+          </div>
         )}
         {sortedTasks.map((item: any) => (
           <TaskCard
