@@ -56,6 +56,7 @@ export const tasks = pgTable("tasks", {
   notifyAt: timestamp("notify_at"),
   recurrenceRule: text("recurrence_rule"),
   createdVia: text("created_via"),
+  archivedAt: timestamp("archived_at"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

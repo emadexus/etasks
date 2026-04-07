@@ -141,10 +141,11 @@ export function useTaskActions(chatId: string | null) {
       revalidateTasks();
       return result;
     },
-    updateTask: async (id: string, data: object) => {
+    updateTask: async (id: string, data: Record<string, any>) => {
       const result = await api(`/api/tasks/${id}`, "PATCH", data);
       revalidateTasks();
       mutate(`/api/tasks/${id}`);
+      if ("archivedAt" in data) revalidateHome();
       return result;
     },
     deleteTask: async (id: string) => {

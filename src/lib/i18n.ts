@@ -18,6 +18,7 @@ const translations = {
     tomorrow: "Tomorrow",
     next7days: "Next 7 Days",
     completed: "Completed",
+    archived: "Archived",
 
     // Sub-tabs
     author: "Author",
@@ -104,6 +105,11 @@ const translations = {
     // Project
     project: "Project",
 
+    // Archive
+    archiveTask: "Archive",
+    unarchiveTask: "Unarchive",
+    noArchivedTasks: "No archived tasks.",
+
     // Move task
     moveToBoard: "Move to...",
     personalInbox: "Personal inbox",
@@ -129,6 +135,7 @@ const translations = {
     tomorrow: "Завтра",
     next7days: "Следующие 7 дней",
     completed: "Завершённые",
+    archived: "Архив",
 
     // Sub-tabs
     author: "Автор",
@@ -214,6 +221,11 @@ const translations = {
 
     // Project
     project: "Проект",
+
+    // Archive
+    archiveTask: "В архив",
+    unarchiveTask: "Из архива",
+    noArchivedTasks: "Нет архивных задач.",
 
     // Move task
     moveToBoard: "Переместить...",

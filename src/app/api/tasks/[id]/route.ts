@@ -65,6 +65,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.notifyAt !== undefined) updates.notifyAt = body.notifyAt ? new Date(body.notifyAt) : null;
   if (body.recurrenceRule !== undefined) updates.recurrenceRule = body.recurrenceRule;
   if (body.projectId !== undefined) updates.projectId = body.projectId || null;
+  if (body.archivedAt !== undefined) updates.archivedAt = body.archivedAt ? new Date(body.archivedAt) : null;
 
   // Move task to a different board (or to personal inbox with boardId=null)
   if (body.boardId !== undefined) {

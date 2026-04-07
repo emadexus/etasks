@@ -3,7 +3,7 @@ import { getAuthFromRequest, getAuthUser } from "@/lib/telegram/auth";
 import { getBoardByChatId, getMemberByTelegramId, upsertMember } from "@/lib/db/queries";
 import { db } from "@/lib/db";
 import { tasks, members, comments, boards } from "@/lib/db/schema";
-import { eq, and, desc, asc, sql } from "drizzle-orm";
+import { eq, and, desc, asc, sql, isNull } from "drizzle-orm";
 import { notifyGroup, notifyUser, formatNewTask, botT } from "@/lib/telegram/notify";
 import { scheduleReminders } from "@/lib/qstash/reminders";
 import type { InlineKeyboardMarkup } from "grammy/types";
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   const assigneeId = req.nextUrl.searchParams.get("assigneeId");
   const sortBy = req.nextUrl.searchParams.get("sortBy") || "newest";
 
-  const conditions = [eq(tasks.boardId, board.id)];
+  const conditions = [eq(tasks.boardId, board.id), sql`${tasks.archivedAt} IS NULL`];
   if (status) conditions.push(eq(tasks.status, status as any));
   if (priority) conditions.push(eq(tasks.priority, priority as any));
   if (assigneeId) conditions.push(eq(tasks.assigneeId, assigneeId));

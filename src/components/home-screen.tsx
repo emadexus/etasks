@@ -20,6 +20,7 @@ const smartFilters = [
   { key: "tomorrow",  labelKey: "tomorrow" as const,  color: "#ff453a", glyph: "◈" },
   { key: "next7days", labelKey: "next7days" as const, color: "#5856d6", glyph: "▦" },
   { key: "completed", labelKey: "completed" as const, color: "#30d158", glyph: "✓" },
+  { key: "archived",  labelKey: "archived" as const,  color: "#8e8e93", glyph: "▪" },
 ];
 
 function FilterIcon({ color, glyph }: { color: string; glyph: string }) {

@@ -143,7 +143,7 @@ export async function getSmartFilterCounts(userId: string) {
   const next7End = new Date(todayStart);
   next7End.setDate(next7End.getDate() + 7);
 
-  const baseWhere = eq(tasks.ownerId, userId);
+  const baseWhere = and(eq(tasks.ownerId, userId), isNull(tasks.archivedAt));
   const notDone = and(baseWhere, sql`${tasks.status} != 'done'`);
 
   const [allCount] = await db.select({ value: count() }).from(tasks).where(notDone);
@@ -172,6 +172,9 @@ export async function getSmartFilterCounts(userId: string) {
   const [completedCount] = await db.select({ value: count() }).from(tasks)
     .where(and(baseWhere, eq(tasks.status, "done")));
 
+  const [archivedCount] = await db.select({ value: count() }).from(tasks)
+    .where(and(eq(tasks.ownerId, userId), sql`${tasks.archivedAt} IS NOT NULL`));
+
   return {
     all: allCount.value,
     inbox: inboxCount.value,
@@ -179,6 +182,7 @@ export async function getSmartFilterCounts(userId: string) {
     tomorrow: tomorrowCount.value,
     next7days: next7Count.value,
     completed: completedCount.value,
+    archived: archivedCount.value,
   };
 }
 
@@ -192,7 +196,7 @@ export async function getFilteredTasks(userId: string, filter: string, projectId
   const next7End = new Date(todayStart);
   next7End.setDate(next7End.getDate() + 7);
 
-  const baseWhere = eq(tasks.ownerId, userId);
+  const baseWhere = and(eq(tasks.ownerId, userId), isNull(tasks.archivedAt));
 
   let whereClause;
 
@@ -228,6 +232,9 @@ export async function getFilteredTasks(userId: string, filter: string, projectId
       case "completed":
         whereClause = and(baseWhere, eq(tasks.status, "done"));
         break;
+      case "archived":
+        whereClause = and(eq(tasks.ownerId, userId), sql`${tasks.archivedAt} IS NOT NULL`);
+        break;
       default: // "all"
         whereClause = and(baseWhere, sql`${tasks.status} != 'done'`);
         break;
@@ -241,7 +248,7 @@ export async function getFilteredTasks(userId: string, filter: string, projectId
     .from(tasks)
     .leftJoin(members, eq(tasks.assigneeId, members.id))
     .where(whereClause)
-    .orderBy(filter === "completed" ? desc(tasks.completedAt) : desc(tasks.createdAt));
+    .orderBy(filter === "completed" ? desc(tasks.completedAt) : filter === "archived" ? desc(tasks.archivedAt) : desc(tasks.createdAt));
 
   return result;
 }
