@@ -86,8 +86,8 @@ function AssigneePicker({ assignee, members, onChange }: {
         <>
           <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
           <div
-            className="fixed z-[101] min-w-[160px] overflow-hidden rounded-xl p-1 shadow-xl"
-            style={{ top: pos.top, right: pos.right, background: "var(--bg-secondary)", border: "1px solid var(--border-card)" }}
+            className="fixed z-[101] min-w-[160px] max-h-[50vh] overflow-y-auto rounded-xl p-1 shadow-xl"
+            style={{ top: pos.top, bottom: pos.bottom, right: pos.right, background: "var(--bg-secondary)", border: "1px solid var(--border-card)" }}
           >
             <button
               className="block w-full rounded-lg px-3 py-2 text-left text-[12px] transition-colors active:bg-white/5"
@@ -159,8 +159,8 @@ function BoardPicker({ currentBoardId, boards, onMove }: {
         <>
           <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
           <div
-            className="fixed z-[101] min-w-[180px] overflow-hidden rounded-xl p-1 shadow-xl"
-            style={{ top: pos.top, right: pos.right, background: "var(--bg-secondary)", border: "1px solid var(--border-card)" }}
+            className="fixed z-[101] min-w-[180px] max-h-[50vh] overflow-y-auto rounded-xl p-1 shadow-xl"
+            style={{ top: pos.top, bottom: pos.bottom, right: pos.right, background: "var(--bg-secondary)", border: "1px solid var(--border-card)" }}
           >
             {/* Personal inbox option */}
             {currentBoardId !== null && (
