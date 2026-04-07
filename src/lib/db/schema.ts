@@ -5,6 +5,7 @@ export const users = pgTable("users", {
   telegramUserId: bigint("telegram_user_id", { mode: "bigint" }).notNull().unique(),
   username: text("username"),
   firstName: text("first_name").notNull(),
+  language: text("language").notNull().default("en"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -55,6 +56,8 @@ export const tasks = pgTable("tasks", {
   datePlanned: timestamp("date_planned"),
   notifyAt: timestamp("notify_at"),
   recurrenceRule: text("recurrence_rule"),
+  tags: text("tags"),
+  checklist: text("checklist"),
   createdVia: text("created_via"),
   archivedAt: timestamp("archived_at"),
   completedAt: timestamp("completed_at"),

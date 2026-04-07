@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useTaskDetail, useComments, useTaskActions, useMembers, useAttachments, useAttachmentActions, useHome } from "@/hooks/use-board";
 import { useTelegram } from "./telegram-provider";
@@ -13,6 +13,7 @@ import { t } from "@/lib/i18n";
 interface TaskDetailSheetProps {
   taskId: string | null;
   chatId: string | null;
+  boardId?: string | null;
   onClose: () => void;
 }
 
@@ -55,42 +56,26 @@ function AssigneePicker({ assignee, members, onChange }: {
   onChange: (memberId: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
-  const triggerRef = useRef<HTMLSpanElement>(null);
-
-  const handleOpen = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const right = window.innerWidth - rect.right;
-      if (spaceBelow < 200) {
-        setPos({ bottom: window.innerHeight - rect.top + 4, right });
-      } else {
-        setPos({ top: rect.bottom + 4, right });
-      }
-    }
-    setOpen(!open);
-  };
 
   return (
-    <span className="relative inline-block" ref={triggerRef}>
+    <>
       <span
         className="cursor-pointer text-[11px] font-medium transition-colors active:opacity-70"
         style={{ color: assignee ? "var(--accent-blue)" : "var(--text-dim)" }}
-        onClick={handleOpen}
+        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
       >
         {assignee ? `@${assignee.username || assignee.firstName}` : t("unassigned")}
       </span>
-      {open && pos && createPortal(
+      {open && createPortal(
         <>
-          <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-[100] bg-black/40" onClick={() => setOpen(false)} />
           <div
-            className="fixed z-[101] min-w-[160px] max-h-[50vh] overflow-y-auto rounded-xl p-1 shadow-xl"
-            style={{ top: pos.top, bottom: pos.bottom, right: pos.right, background: "var(--bg-secondary)", border: "1px solid var(--border-card)" }}
+            className="fixed inset-x-0 bottom-0 z-[101] max-h-[60vh] overflow-y-auto rounded-t-2xl px-2 pb-8 pt-3"
+            style={{ background: "var(--bg-secondary)" }}
           >
+            <div className="mx-auto mb-3 h-1 w-8 rounded-full" style={{ background: "var(--text-dim)" }} />
             <button
-              className="block w-full rounded-lg px-3 py-2 text-left text-[12px] transition-colors active:bg-white/5"
+              className="block w-full rounded-lg px-3 py-3 text-left text-[14px] transition-colors active:bg-white/5"
               style={{ color: "var(--text-muted)" }}
               onClick={(e) => { e.stopPropagation(); onChange(null); setOpen(false); }}
             >
@@ -98,7 +83,7 @@ function AssigneePicker({ assignee, members, onChange }: {
             </button>
             {members.map((m: any) => (
               <button key={m.id}
-                className="block w-full rounded-lg px-3 py-2 text-left text-[12px] transition-colors active:bg-white/5"
+                className="block w-full rounded-lg px-3 py-3 text-left text-[14px] transition-colors active:bg-white/5"
                 style={{ color: "var(--text-primary)" }}
                 onClick={(e) => { e.stopPropagation(); onChange(m.id); setOpen(false); }}
               >
@@ -106,7 +91,7 @@ function AssigneePicker({ assignee, members, onChange }: {
               </button>
             ))}
             {members.length === 0 && (
-              <div className="px-3 py-2 text-[11px]" style={{ color: "var(--text-dim)" }}>
+              <div className="px-3 py-3 text-[13px]" style={{ color: "var(--text-dim)" }}>
                 {t("noMembersFound")}
               </div>
             )}
@@ -114,7 +99,7 @@ function AssigneePicker({ assignee, members, onChange }: {
         </>,
         document.body
       )}
-    </span>
+    </>
   );
 }
 
@@ -124,52 +109,36 @@ function BoardPicker({ currentBoardId, boards, onMove }: {
   onMove: (boardId: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
-  const triggerRef = useRef<HTMLSpanElement>(null);
 
   const currentLabel = currentBoardId
     ? boards.find(b => b.id === currentBoardId)?.name || "?"
     : t("personalInbox");
 
-  const handleOpen = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const right = window.innerWidth - rect.right;
-      if (spaceBelow < 200) {
-        setPos({ bottom: window.innerHeight - rect.top + 4, right });
-      } else {
-        setPos({ top: rect.bottom + 4, right });
-      }
-    }
-    setOpen(!open);
-  };
-
   return (
-    <span className="relative inline-block" ref={triggerRef}>
+    <>
       <span
         className="cursor-pointer rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors active:opacity-70"
         style={{ color: "var(--accent-orange)", background: "var(--accent-orange)18" }}
-        onClick={handleOpen}
+        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
       >
         {currentLabel} ›
       </span>
-      {open && pos && createPortal(
+      {open && createPortal(
         <>
-          <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-[100] bg-black/40" onClick={() => setOpen(false)} />
           <div
-            className="fixed z-[101] min-w-[180px] max-h-[50vh] overflow-y-auto rounded-xl p-1 shadow-xl"
-            style={{ top: pos.top, bottom: pos.bottom, right: pos.right, background: "var(--bg-secondary)", border: "1px solid var(--border-card)" }}
+            className="fixed inset-x-0 bottom-0 z-[101] max-h-[60vh] overflow-y-auto rounded-t-2xl px-2 pb-8 pt-3"
+            style={{ background: "var(--bg-secondary)" }}
           >
+            <div className="mx-auto mb-3 h-1 w-8 rounded-full" style={{ background: "var(--text-dim)" }} />
             {/* Personal inbox option */}
             {currentBoardId !== null && (
               <button
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-[12px] transition-colors active:bg-white/5"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left text-[14px] transition-colors active:bg-white/5"
                 style={{ color: "var(--text-primary)" }}
                 onClick={(e) => { e.stopPropagation(); onMove(null); setOpen(false); }}
               >
-                <span className="flex h-5 w-5 items-center justify-center rounded text-[10px]" style={{ background: "var(--accent-orange)", color: "#fff" }}>▣</span>
+                <span className="flex h-6 w-6 items-center justify-center rounded text-[11px]" style={{ background: "var(--accent-orange)", color: "#fff" }}>▣</span>
                 {t("personalInbox")}
               </button>
             )}
@@ -179,18 +148,18 @@ function BoardPicker({ currentBoardId, boards, onMove }: {
               .map((b) => (
                 <button
                   key={b.id}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-[12px] transition-colors active:bg-white/5"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left text-[14px] transition-colors active:bg-white/5"
                   style={{ color: "var(--text-primary)" }}
                   onClick={(e) => { e.stopPropagation(); onMove(b.id); setOpen(false); }}
                 >
-                  <span className="flex h-5 w-5 items-center justify-center rounded text-[10px] font-semibold" style={{ background: "var(--accent-blue)", color: "#fff" }}>
+                  <span className="flex h-6 w-6 items-center justify-center rounded text-[11px] font-semibold" style={{ background: "var(--accent-blue)", color: "#fff" }}>
                     {b.name[0].toUpperCase()}
                   </span>
                   {b.name}
                 </button>
               ))}
             {boards.length === 0 && currentBoardId === null && (
-              <div className="px-3 py-2 text-[11px]" style={{ color: "var(--text-dim)" }}>
+              <div className="px-3 py-3 text-[13px]" style={{ color: "var(--text-dim)" }}>
                 {t("noTasksYet")}
               </div>
             )}
@@ -198,7 +167,7 @@ function BoardPicker({ currentBoardId, boards, onMove }: {
         </>,
         document.body
       )}
-    </span>
+    </>
   );
 }
 
@@ -208,24 +177,49 @@ function formatDate(d: Date | null, lang: string = "en"): string {
   return d.toLocaleDateString(locale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProps) {
-  const { data: taskData, mutate: mutateTask } = useTaskDetail(taskId);
-  const { data: commentsData, mutate: mutateComments } = useComments(taskId);
-  const { data: membersData } = useMembers(chatId);
-  const { updateTask, addComment, moveTask } = useTaskActions(chatId);
-  const { data: attachmentsData, mutate: mutateAttachments } = useAttachments(taskId);
-  const { uploadFile } = useAttachmentActions();
+export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose }: TaskDetailSheetProps) {
+  const isDraft = !taskId;
+  const [createdId, setCreatedId] = useState<string | null>(null);
+  const activeId = taskId || createdId;
+
+  const { data: taskData, mutate: mutateTask } = useTaskDetail(activeId);
+  const { data: commentsData, mutate: mutateComments } = useComments(activeId);
   const { data: homeData } = useHome();
+
+  // Resolve the correct chatId from the task's boardId (not the URL's chatId)
+  const taskBoardId = taskData?.task?.boardId;
+  const resolvedChatId = taskBoardId
+    ? (homeData?.boards as any[])?.find((b: any) => b.id === taskBoardId)?.chatId || chatId
+    : chatId;
+
+  const { data: membersData } = useMembers(resolvedChatId);
+  const { updateTask, addComment, moveTask, deleteTask, createTask } = useTaskActions(resolvedChatId);
+  const { data: attachmentsData, mutate: mutateAttachments } = useAttachments(activeId);
+  const { uploadFile } = useAttachmentActions();
   const { showToast } = useToast();
   const { lang } = useTelegram();
 
-  const [localTask, setLocalTask] = useState<any>(null);
+  const [localTask, setLocalTask] = useState<any>(isDraft ? {
+    id: null, status: "todo", priority: "medium", boardId: propBoardId || null,
+    assigneeId: null, dateDue: null, datePlanned: null, tags: null,
+    recurrenceRule: null, archivedAt: null, description: null,
+  } : null);
+  // Update draft boardId when homeData loads
+  useEffect(() => {
+    if (isDraft && !createdId && chatId && homeData?.boards) {
+      const bid = (homeData.boards as any[]).find((b: any) => b.chatId === chatId)?.id || null;
+      if (bid) setLocalTask((prev: any) => prev && !prev.boardId ? { ...prev, boardId: bid } : prev);
+    }
+  }, [isDraft, createdId, chatId, homeData]);
+
   const [localReminders, setLocalReminders] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [pendingUpdates, setPendingUpdates] = useState(0);
   const [saving, setSaving] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [tagInput, setTagInput] = useState("");
+  const [checklistInput, setChecklistInput] = useState("");
 
   useEffect(() => {
     if (taskData?.task && pendingUpdates === 0) {
@@ -240,34 +234,70 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
     }
   }, [taskData, pendingUpdates]);
 
+  // Draft: create task when title is entered
+  const handleTitleBlur = useCallback(async () => {
+    if (isDraft && !createdId) {
+      if (!title.trim()) return; // no title = no task
+      setSaving(true);
+      try {
+        const result = await createTask({ title: title.trim(), chatId: chatId || undefined });
+        if (result?.id) {
+          setCreatedId(result.id);
+          setLocalTask((prev: any) => prev ? { ...prev, id: result.id } : prev);
+        }
+      } catch (e) {
+        console.error("Failed to create task:", e);
+      }
+      setSaving(false);
+    } else if (activeId && title !== (taskData?.task?.title || "")) {
+      handleUpdate("title", title);
+    }
+  }, [isDraft, createdId, title, chatId, createTask, activeId, taskData]);
+
   const handleUpdate = useCallback(async (field: string, value: any) => {
+    if (!activeId) return;
     setLocalTask((prev: any) => prev ? { ...prev, [field]: value } : prev);
     setSaving(true);
     setPendingUpdates(n => n + 1);
 
-    updateTask(localTask?.id || taskId!, { [field]: value })
-      .then(() => {
+    updateTask(activeId, { [field]: value })
+      .then(async () => {
+        await mutateTask((current: any) => {
+          if (!current) return current;
+          const updated: any = { ...current, task: { ...current.task, [field]: value } };
+          if (field === "assigneeId") {
+            updated.assignee = value
+              ? (membersData || []).find((m: any) => m.id === value) || current.assignee
+              : null;
+          }
+          return updated;
+        }, { revalidate: false });
         setPendingUpdates(n => n - 1);
-        // Optimistic: update SWR cache with the new value to avoid old→new flash
-        mutateTask((current: any) => current ? { ...current, task: { ...current.task, [field]: value } } : current, { revalidate: true });
       })
       .catch((e) => { console.error(e); setPendingUpdates(n => n - 1); setSaving(false); });
-  }, [localTask, taskId, updateTask, mutateTask]);
+  }, [activeId, updateTask, mutateTask, membersData]);
 
   const handleMultiUpdate = useCallback(async (updates: Record<string, any>) => {
+    if (!activeId) return;
     setLocalTask((prev: any) => prev ? { ...prev, ...updates } : prev);
     setSaving(true);
     setPendingUpdates(n => n + 1);
 
-    updateTask(localTask?.id || taskId!, updates)
-      .then(() => { setPendingUpdates(n => n - 1); mutateTask(); })
+    updateTask(activeId, updates)
+      .then(async () => { await mutateTask((current: any) => current ? { ...current, task: { ...current.task, ...updates } } : current, { revalidate: false }); setPendingUpdates(n => n - 1); })
       .catch((e) => { console.error(e); setPendingUpdates(n => n - 1); setSaving(false); });
-  }, [localTask, taskId, updateTask, mutateTask]);
+  }, [activeId, updateTask, mutateTask]);
 
-  if (!taskId || !localTask) return null;
+  // For drafts, show the empty card. For existing tasks, wait for data.
+  if (!isDraft && !localTask) return null;
+  if (!localTask) return null;
 
   const task = localTask;
   const assignee = taskData?.assignee;
+  const tags: string[] = task.tags ? (typeof task.tags === "string" ? JSON.parse(task.tags) : task.tags) : [];
+  const checklist: { text: string; done: boolean }[] = task.checklist
+    ? (typeof task.checklist === "string" ? JSON.parse(task.checklist) : task.checklist)
+    : [];
   const dateDue = task.dateDue ? new Date(task.dateDue) : null;
   const datePlanned = task.datePlanned ? new Date(task.datePlanned) : null;
   const isOverdue = dateDue ? dateDue.getTime() < Date.now() : false;
@@ -283,91 +313,218 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
         className="fixed inset-x-0 bottom-0 z-50 flex max-h-[90vh] flex-col rounded-t-2xl"
         style={{ background: "var(--bg-secondary)" }}
       >
-        <div className="flex-shrink-0 px-4 pt-3">
-          <div className="mx-auto mb-1 h-1 w-8 rounded-full" style={{ background: "var(--text-dim)" }} />
-          <div className="h-4 text-center text-[10px]" style={{ color: "var(--text-dim)" }}>
+        <div className="flex-shrink-0 px-4 pt-3 pb-1">
+          <div className="flex items-center justify-between">
+            <div className="flex-1" />
+            <div className="mx-auto h-1 w-10 cursor-pointer rounded-full" style={{ background: "var(--text-dim)" }} onClick={onClose} />
+            <div className="flex flex-1 justify-end">
+              {activeId && (
+                <button
+                  className="rounded-md p-1 transition-colors active:bg-white/10"
+                  style={{ color: "var(--text-dim)" }}
+                  onClick={() => {
+                    const botUsername = process.env.NEXT_PUBLIC_BOT_USERNAME || "e_task_bot";
+                    const link = `https://t.me/${botUsername}/open?startapp=task${task.id}`;
+                    if (navigator.clipboard?.writeText) {
+                      navigator.clipboard.writeText(link).then(() => showToast(lang === "ru" ? "Ссылка скопирована" : "Link copied"));
+                    } else {
+                      const ta = document.createElement("textarea");
+                      ta.value = link;
+                      ta.style.position = "fixed";
+                      ta.style.opacity = "0";
+                      document.body.appendChild(ta);
+                      ta.select();
+                      document.execCommand("copy");
+                      document.body.removeChild(ta);
+                      showToast(lang === "ru" ? "Ссылка скопирована" : "Link copied");
+                    }
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
+                    <path d="M10.5 5.5V3.5a1.5 1.5 0 00-1.5-1.5H3.5A1.5 1.5 0 002 3.5V9a1.5 1.5 0 001.5 1.5h2" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="mt-1 h-3 text-center text-[10px]" style={{ color: "var(--text-muted)" }}>
             {saving ? t("saving") : ""}
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 pb-8">
-          <input
-            className="mb-1 w-full bg-transparent text-[16px] font-semibold outline-none"
+          {/* Title — multi-line */}
+          <textarea
+            ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } }}
+            autoFocus={isDraft}
+            className="mb-1 w-full resize-none bg-transparent text-[17px] font-semibold leading-snug outline-none"
             style={{ color: "var(--text-primary)" }}
+            placeholder={isDraft ? (lang === "ru" ? "Название задачи..." : "Task title...") : ""}
+            rows={1}
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={() => title !== task.title && handleUpdate("title", title)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              const el = e.target;
+              el.style.height = "auto";
+              el.style.height = el.scrollHeight + "px";
+            }}
+            onBlur={handleTitleBlur}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.target as HTMLTextAreaElement).blur(); } }}
           />
 
           <textarea
             className="mb-3 w-full resize-none bg-transparent text-[13px] outline-none"
-            style={{ color: "var(--text-secondary)" }}
+            style={{ color: "var(--text-secondary)", minHeight: "2.5em" }}
             placeholder={t("addDescription")}
-            rows={2}
+            rows={1}
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => {
+              setDescription(e.target.value);
+              // Auto-expand
+              const el = e.target;
+              el.style.height = "auto";
+              el.style.height = el.scrollHeight + "px";
+            }}
+            onFocus={(e) => { const el = e.target; el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; }}
             onBlur={() => description !== (task.description || "") && handleUpdate("description", description)}
           />
 
-          {/* Field rows — iOS Settings style */}
-          <div className="mb-3 overflow-hidden rounded-xl" style={{ background: "var(--bg-card)" }}>
-            {/* Status */}
-            <div
-              className="flex items-center justify-between px-3.5 py-2.5 transition-colors active:bg-white/5"
-              style={{ cursor: "pointer" }}
-              onClick={() => handleUpdate("status", statusMap[task.status]?.next || "todo")}
-            >
-              <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>{t("statusLabel")}</span>
-              <span className="text-[13px] font-medium" style={{ color: statusMap[task.status]?.color }}>
-                {statusMap[task.status]?.label} ›
-              </span>
-            </div>
-
-            <div style={{ borderTop: "1px solid var(--border-separator)" }} />
-
-            {/* Priority */}
-            <div
-              className="flex items-center justify-between px-3.5 py-2.5 transition-colors active:bg-white/5"
-              style={{ cursor: "pointer" }}
-              onClick={() => handleUpdate("priority", priorityMap[task.priority]?.next || "medium")}
-            >
-              <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>{t("priorityLabel")}</span>
-              <span className="text-[13px] font-medium" style={{ color: priorityMap[task.priority]?.color }}>
-                {priorityMap[task.priority]?.label} ›
-              </span>
-            </div>
-
-            {/* Assignee — only for board tasks */}
+          {/* Metadata — compact inline chips */}
+          <div className="mb-3 flex flex-wrap items-center gap-1.5">
+            <CycleLabel value={task.status} map={statusMap} onCycle={(next) => handleUpdate("status", next)} />
+            <CycleLabel value={task.priority} map={priorityMap} onCycle={(next) => handleUpdate("priority", next)} />
             {isBoard && (
-              <>
-                <div style={{ borderTop: "1px solid var(--border-separator)" }} />
-                <div className="flex items-center justify-between px-3.5 py-2.5">
-                  <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>{t("assigneeLabel")}</span>
-                  <AssigneePicker
-                    assignee={assignee}
-                    members={membersData || []}
-                    onChange={(id) => handleUpdate("assigneeId", id)}
-                  />
-                </div>
-              </>
-            )}
-
-            <div style={{ borderTop: "1px solid var(--border-separator)" }} />
-
-            {/* Board */}
-            <div className="flex items-center justify-between px-3.5 py-2.5">
-              <span className="text-[13px]" style={{ color: "var(--text-muted)" }}>{t("boardLabel")}</span>
-              <BoardPicker
-                currentBoardId={task.boardId}
-                boards={homeData?.boards || []}
-                onMove={async (newBoardId) => {
-                  await moveTask(task.id, newBoardId);
-                  mutateTask();
-                  onClose();
-                }}
+              <AssigneePicker
+                assignee={assignee}
+                members={membersData || []}
+                onChange={(id) => handleUpdate("assigneeId", id)}
               />
-            </div>
+            )}
+            <BoardPicker
+              currentBoardId={task.boardId}
+              boards={homeData?.boards || []}
+              onMove={async (newBoardId) => {
+                await moveTask(task.id, newBoardId);
+                mutateTask();
+                showToast(t("taskMoved"));
+              }}
+            />
           </div>
+
+          {/* Tags */}
+          <div className="mb-3 flex flex-wrap items-center gap-1.5">
+            {tags.map((tag, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium"
+                style={{ background: "var(--accent-purple-bg)", color: "var(--accent-purple)" }}
+              >
+                {tag}
+                <button
+                  className="ml-0.5 text-[10px] opacity-60 active:opacity-100"
+                  onClick={() => handleUpdate("tags", tags.filter((_, j) => j !== i))}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+            <input
+              className="min-w-[80px] flex-1 bg-transparent text-[11px] outline-none"
+              style={{ color: "var(--text-muted)" }}
+              placeholder={tags.length === 0 ? (lang === "ru" ? "Добавить тег..." : "Add tag...") : "+"}
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.key === "Enter" || e.key === ",") && tagInput.trim()) {
+                  e.preventDefault();
+                  const newTag = tagInput.trim().replace(/,/g, "");
+                  if (newTag && !tags.includes(newTag)) {
+                    handleUpdate("tags", [...tags, newTag]);
+                  }
+                  setTagInput("");
+                }
+              }}
+              onBlur={() => {
+                if (tagInput.trim()) {
+                  const newTag = tagInput.trim();
+                  if (!tags.includes(newTag)) {
+                    handleUpdate("tags", [...tags, newTag]);
+                  }
+                  setTagInput("");
+                }
+              }}
+            />
+          </div>
+
+          {/* Checklist */}
+          {(checklist.length > 0 || activeId) && (
+            <div className="mb-3 overflow-hidden rounded-xl" style={{ background: "var(--bg-card)" }}>
+              {checklist.length > 0 && (
+                <div className="px-1 py-1 text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-dim)", paddingLeft: "14px", paddingTop: "8px" }}>
+                  {lang === "ru" ? "Чек-лист" : "Checklist"} · {checklist.filter(c => c.done).length}/{checklist.length}
+                </div>
+              )}
+              {checklist.map((item, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 px-3 py-2"
+                  style={i > 0 ? { borderTop: "1px solid var(--border-separator)" } : undefined}
+                >
+                  <button
+                    className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md transition-colors"
+                    style={{
+                      border: item.done ? "none" : "1.5px solid var(--text-dim)",
+                      background: item.done ? "var(--accent-green)" : "transparent",
+                    }}
+                    onClick={() => {
+                      const updated = checklist.map((c, j) => j === i ? { ...c, done: !c.done } : c);
+                      handleUpdate("checklist", updated);
+                    }}
+                  >
+                    {item.done && <span className="text-[11px] text-white">✓</span>}
+                  </button>
+                  <span
+                    className="flex-1 text-[13px]"
+                    style={{
+                      color: item.done ? "var(--text-dim)" : "var(--text-primary)",
+                      textDecoration: item.done ? "line-through" : "none",
+                    }}
+                  >
+                    {item.text}
+                  </span>
+                  <button
+                    className="flex-shrink-0 text-[10px] opacity-40 transition-opacity active:opacity-100"
+                    style={{ color: "var(--text-dim)" }}
+                    onClick={() => {
+                      const updated = checklist.filter((_, j) => j !== i);
+                      handleUpdate("checklist", updated.length > 0 ? updated : null);
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <div className="flex items-center gap-2 px-3 py-2" style={checklist.length > 0 ? { borderTop: "1px solid var(--border-separator)" } : undefined}>
+                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center text-[14px]" style={{ color: "var(--text-dim)" }}>+</span>
+                <input
+                  className="flex-1 bg-transparent text-[13px] outline-none"
+                  style={{ color: "var(--text-muted)" }}
+                  placeholder={lang === "ru" ? "Добавить пункт..." : "Add item..."}
+                  value={checklistInput}
+                  onChange={(e) => setChecklistInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && checklistInput.trim()) {
+                      e.preventDefault();
+                      const updated = [...checklist, { text: checklistInput.trim(), done: false }];
+                      handleUpdate("checklist", updated);
+                      setChecklistInput("");
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
           <button
             className="mb-3 w-full rounded-xl px-3 py-2.5 text-left transition-colors active:bg-white/5"
@@ -492,49 +649,33 @@ export function TaskDetailSheet({ taskId, chatId, onClose }: TaskDetailSheetProp
             </div>
           )}
 
-          {/* Actions — share + archive */}
-          <div className="mt-6 border-t pt-4" style={{ borderColor: "var(--border-separator)" }}>
-            <div className="flex gap-2">
+          {/* Bottom actions */}
+          <div className="mt-6 flex items-center gap-4">
+            <button
+              className="text-[11px] transition-colors active:opacity-70"
+              style={{ color: task.archivedAt ? "var(--accent-blue)" : "var(--text-muted)" }}
+              onClick={async () => {
+                const val = task.archivedAt ? null : new Date().toISOString();
+                await handleUpdate("archivedAt", val);
+                showToast(val ? t("taskArchived") : t("taskUnarchived"));
+              }}
+            >
+              {task.archivedAt ? t("unarchiveTask") : t("archiveTask")}
+            </button>
+            {task.archivedAt && (
               <button
-                className="flex-1 rounded-xl py-2.5 text-center text-[12px] font-medium transition-colors active:opacity-70"
-                style={{ color: "var(--accent-blue)", background: "var(--bg-card)" }}
-                onClick={() => {
-                  const botUsername = process.env.NEXT_PUBLIC_BOT_USERNAME || "e_task_bot";
-                  const link = `https://t.me/${botUsername}/app?startapp=task${task.id}`;
-                  if (navigator.clipboard?.writeText) {
-                    navigator.clipboard.writeText(link).then(() => showToast(lang === "ru" ? "Ссылка скопирована" : "Link copied"));
-                  } else {
-                    // Fallback for Telegram WebView
-                    const ta = document.createElement("textarea");
-                    ta.value = link;
-                    ta.style.position = "fixed";
-                    ta.style.opacity = "0";
-                    document.body.appendChild(ta);
-                    ta.select();
-                    document.execCommand("copy");
-                    document.body.removeChild(ta);
-                    showToast(lang === "ru" ? "Ссылка скопирована" : "Link copied");
-                  }
-                }}
-              >
-                {lang === "ru" ? "Скопировать ссылку" : "Copy link"}
-              </button>
-              <button
-                className="flex-1 rounded-xl py-2.5 text-center text-[12px] font-medium transition-colors active:opacity-70"
-                style={{
-                  color: task.archivedAt ? "var(--accent-blue)" : "var(--text-dim)",
-                  background: "var(--bg-card)",
-                }}
+                className="text-[11px] transition-colors active:opacity-70"
+                style={{ color: "var(--accent-red)" }}
                 onClick={async () => {
-                  const val = task.archivedAt ? null : new Date().toISOString();
-                  await handleUpdate("archivedAt", val);
-                  showToast(val ? t("taskArchived") : t("taskUnarchived"));
-                  if (val) onClose();
+                  if (!confirm(lang === "ru" ? "Удалить задачу навсегда?" : "Delete task permanently?")) return;
+                  await deleteTask(task.id);
+                  showToast(lang === "ru" ? "Задача удалена" : "Task deleted");
+                  onClose();
                 }}
               >
-                {task.archivedAt ? t("unarchiveTask") : t("archiveTask")}
+                {lang === "ru" ? "Удалить навсегда" : "Delete permanently"}
               </button>
-            </div>
+            )}
           </div>
         </div>
       </div>

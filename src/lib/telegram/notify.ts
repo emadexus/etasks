@@ -50,6 +50,7 @@ export async function notifyGroup(chatId: bigint, text: string, replyMarkup?: Re
   try {
     await bot.api.sendMessage(chatId.toString(), text, {
       parse_mode: "HTML",
+      link_preview_options: { is_disabled: true },
       ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
     });
   } catch (e) {
@@ -77,6 +78,21 @@ export function formatNewTask(title: string, priority: string, assigneeUsername:
 export function formatComment(authorName: string, taskTitle: string, commentText: string, lang: string = "en") {
   const preview = commentText.length > 100 ? commentText.slice(0, 100) + "..." : commentText;
   return `<b>${authorName}</b> ${botT("commentedOn", lang)} <b>${taskTitle}</b>\n<i>"${preview}"</i>`;
+}
+
+function taskLink(taskId: string, title: string): string {
+  const botUsername = process.env.NEXT_PUBLIC_BOT_USERNAME || "e_task_bot";
+  return `<a href="https://t.me/${botUsername}/open?startapp=task${taskId}">${title}</a>`;
+}
+
+export function formatAssigneeChanged(taskId: string, taskTitle: string, assigneeName: string | null, changedByName: string, lang: string = "en") {
+  const linked = taskLink(taskId, taskTitle);
+  if (assigneeName) {
+    const msg = lang === "ru" ? `назначена на <b>${assigneeName}</b>` : `assigned to <b>${assigneeName}</b>`;
+    return `📋 <b>${linked}</b>\n${msg}\n<i>${lang === "ru" ? "от" : "by"} ${changedByName}</i>`;
+  }
+  const msg = lang === "ru" ? "снято назначение" : "unassigned";
+  return `📋 <b>${linked}</b>\n${msg}\n<i>${lang === "ru" ? "от" : "by"} ${changedByName}</i>`;
 }
 
 export function formatDeadlineReminder(taskTitle: string, timeLeft: string, assigneeUsername: string | null, lang: string = "en") {

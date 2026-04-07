@@ -54,6 +54,20 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         const isMobile = /android|ios/i.test(platform);
         if (isMobile && tg.expand) tg.expand();
         const initDataRaw = tg.initData || null;
+        // If Telegram WebApp script loaded but no real init data (e.g. opened in regular browser), use dev fallback
+        if (!initDataRaw && process.env.NODE_ENV === "development") {
+          const params = new URLSearchParams(window.location.search);
+          const chatId = params.get("chatId") || "-4929114614";
+          const lang = params.get("lang") || navigator.language?.slice(0, 2) || "en";
+          const startapp = params.get("startapp") || null;
+          let openTaskId: string | null = null;
+          let startBoardChatId: string | null = null;
+          if (startapp?.startsWith("task")) openTaskId = startapp.slice(4);
+          else if (startapp?.startsWith("chat")) { const parsed = startapp.slice(4).replace("n", "-"); startBoardChatId = parsed; }
+          setLocale(lang);
+          setCtx({ initData: "dev", chatId, userId: "247463948", openTaskId, startBoardChatId, lang, tzOffset: new Date().getTimezoneOffset(), ready: true });
+          return;
+        }
         let chatId = new URLSearchParams(window.location.search).get("chatId");
         let openTaskId: string | null = null;
         let startBoardChatId: string | null = null;
@@ -81,16 +95,26 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         const chatId = params.get("chatId") || "-4929114614";
         const userId = "247463948";
         const lang = params.get("lang") || navigator.language?.slice(0, 2) || "en";
+        const startapp = params.get("startapp") || null;
+        let openTaskId: string | null = null;
+        let startBoardChatId: string | null = null;
+        if (startapp?.startsWith("task")) openTaskId = startapp.slice(4);
+        else if (startapp?.startsWith("chat")) startBoardChatId = startapp.slice(4).replace("n", "-");
         setLocale(lang);
-        setCtx({ initData: "dev", chatId, userId, openTaskId: null, startBoardChatId: null, lang, tzOffset: new Date().getTimezoneOffset(), ready: true });
+        setCtx({ initData: "dev", chatId, userId, openTaskId, startBoardChatId, lang, tzOffset: new Date().getTimezoneOffset(), ready: true });
       }
     } catch (e) {
       console.warn("Not in Telegram Mini App context:", e);
       const params = new URLSearchParams(window.location.search);
       const chatId = params.get("chatId") || "-4929114614";
       const lang = params.get("lang") || navigator.language?.slice(0, 2) || "en";
+      const startapp = params.get("startapp") || null;
+      let openTaskId: string | null = null;
+      let startBoardChatId: string | null = null;
+      if (startapp?.startsWith("task")) openTaskId = startapp.slice(4);
+      else if (startapp?.startsWith("chat")) startBoardChatId = startapp.slice(4).replace("n", "-");
       setLocale(lang);
-      setCtx({ initData: "dev", chatId, userId: "247463948", openTaskId: null, startBoardChatId: null, lang, tzOffset: new Date().getTimezoneOffset(), ready: true });
+      setCtx({ initData: "dev", chatId, userId: "247463948", openTaskId, startBoardChatId, lang, tzOffset: new Date().getTimezoneOffset(), ready: true });
     }
   }, []);
 

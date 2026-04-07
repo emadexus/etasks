@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useTelegram } from "@/components/telegram-provider";
-import { useHome, useTaskDetail } from "@/hooks/use-board";
+import { useHome, useTaskDetail, useUserActions, useBoardActions } from "@/hooks/use-board";
+import { TaskDetailSheet } from "./task-detail-sheet";
+import { setLocale } from "@/lib/i18n";
 import { TaskListView } from "./task-list-view";
 import { FabMenu } from "./fab-menu";
 import { t } from "@/lib/i18n";
@@ -20,7 +23,7 @@ const smartFilters = [
   { key: "tomorrow",  labelKey: "tomorrow" as const,  color: "#f87171", icon: "sunrise" as const },
   { key: "next7days", labelKey: "next7days" as const, color: "#6366f1", icon: "calendar" as const },
   { key: "completed", labelKey: "completed" as const, color: "#34d399", icon: "check" as const },
-  // "archived" hidden from home — accessible only via task-detail sheet
+  { key: "archived",  labelKey: "archived" as const,  color: "#6e6879", icon: "archive" as const },
 ];
 
 function FilterIcon({ color, icon }: { color: string; icon: string }) {
@@ -113,18 +116,117 @@ function FilterIcon({ color, icon }: { color: string; icon: string }) {
   );
 }
 
+const LANGUAGES = [
+  { code: "en", label: "English", flag: "🇬🇧" },
+  { code: "ru", label: "Русский", flag: "🇷🇺" },
+];
+
+function SettingsSheet({ user, boards, onClose }: {
+  user: any;
+  boards: any[];
+  onClose: () => void;
+}) {
+  const { updateLanguage } = useUserActions();
+  const { updateBoardLanguage } = useBoardActions();
+  const [userLang, setUserLang] = useState(user?.language || "en");
+
+  const handleUserLang = async (lang: string) => {
+    setUserLang(lang);
+    setLocale(lang);
+    await updateLanguage(lang);
+  };
+
+  const handleBoardLang = async (boardId: string, lang: string) => {
+    await updateBoardLanguage(boardId, lang);
+  };
+
+  return createPortal(
+    <>
+      <div className="fixed inset-0 z-[100] bg-black/40" onClick={onClose} />
+      <div
+        className="fixed inset-x-0 bottom-0 z-[101] max-h-[80vh] overflow-y-auto rounded-t-2xl px-4 pb-8 pt-3"
+        style={{ background: "var(--bg-secondary)" }}
+      >
+        <div className="mx-auto mb-4 h-1 w-8 rounded-full" style={{ background: "var(--text-dim)" }} />
+
+        <div className="mb-1 text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+          {userLang === "ru" ? "Язык приложения" : "App language"}
+        </div>
+        <div className="mb-4 overflow-hidden rounded-xl" style={{ background: "var(--bg-card)" }}>
+          {LANGUAGES.map((l, i) => (
+            <button
+              key={l.code}
+              className="flex w-full items-center gap-3 px-3.5 py-3 transition-colors active:bg-white/5"
+              style={i > 0 ? { borderTop: "1px solid var(--border-separator)" } : undefined}
+              onClick={() => handleUserLang(l.code)}
+            >
+              <span className="text-[16px]">{l.flag}</span>
+              <span className="flex-1 text-left text-[14px]" style={{ color: "var(--text-primary)" }}>{l.label}</span>
+              {userLang === l.code && <span className="text-[16px]" style={{ color: "var(--accent-green)" }}>✓</span>}
+            </button>
+          ))}
+        </div>
+
+        {boards && boards.length > 0 && (
+          <>
+            <div className="mb-1 text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
+              {userLang === "ru" ? "Язык уведомлений (группы)" : "Notification language (groups)"}
+            </div>
+            <div className="overflow-hidden rounded-xl" style={{ background: "var(--bg-card)" }}>
+              {boards.map((b: any, i: number) => (
+                <div
+                  key={b.id}
+                  className="flex items-center gap-3 px-3.5 py-3"
+                  style={i > 0 ? { borderTop: "1px solid var(--border-separator)" } : undefined}
+                >
+                  <span className="flex-1 text-[14px]" style={{ color: "var(--text-primary)" }}>{b.name}</span>
+                  <div className="flex gap-1">
+                    {LANGUAGES.map((l) => (
+                      <button
+                        key={l.code}
+                        className="rounded-lg px-2.5 py-1 text-[12px] font-medium transition-colors"
+                        style={{
+                          background: (b.language || "en") === l.code ? "var(--accent-blue)" : "var(--bg-secondary)",
+                          color: (b.language || "en") === l.code ? "#fff" : "var(--text-muted)",
+                        }}
+                        onClick={() => handleBoardLang(b.id, l.code)}
+                      >
+                        {l.flag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </>,
+    document.body
+  );
+}
+
 export function HomeScreen() {
-  const { ready, openTaskId, startBoardChatId, userId } = useTelegram();
+  const { ready, openTaskId, startBoardChatId } = useTelegram();
   const { data: home, error: homeError } = useHome();
   const { data: deepLinkTask } = useTaskDetail(openTaskId);
 
   const [view, setView] = useState<ViewState>({ type: "home" });
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showDraft, setShowDraft] = useState(false);
 
   const user = home?.user;
   const counts = home?.counts;
   const boards = home?.boards;
   const projectsList = home?.projects;
+
+  // Apply user's saved language preference
+  useEffect(() => {
+    if (user?.language) {
+      setLocale(user.language);
+    }
+  }, [user?.language]);
 
   // Deep link: open specific board via startapp=chatn...
   useEffect(() => {
@@ -140,9 +242,10 @@ export function HomeScreen() {
 
   // Deep link: open specific task
   useEffect(() => {
-    if (!openTaskId || !deepLinkTask?.task) return;
+    if (deepLinkHandled || !openTaskId || !deepLinkTask?.task) return;
     if (view.type !== "home") return;
 
+    setDeepLinkHandled(true);
     const task = deepLinkTask.task;
     if (task.boardId && boards) {
       const board = (boards as any[]).find((b: any) => b.id === task.boardId);
@@ -193,7 +296,7 @@ export function HomeScreen() {
     return (
       <TaskListView
         context={view}
-        openTaskId={openTaskId || undefined}
+        openTaskId={deepLinkHandled ? undefined : (openTaskId || undefined)}
         onBack={() => setView({ type: "home" })}
       />
     );
@@ -204,7 +307,10 @@ export function HomeScreen() {
   return (
     <div className="app-scroll-container mx-auto max-w-lg px-4 pb-24 pt-6">
       {/* ── User header ── */}
-      <div className="mb-5 flex items-center justify-between">
+      <button
+        className="mb-5 flex w-full items-center justify-between transition-colors active:opacity-70"
+        onClick={() => setShowSettings(true)}
+      >
         <div className="flex items-center gap-2.5">
           <div
             className="flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold"
@@ -217,7 +323,15 @@ export function HomeScreen() {
             <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>›</span>
           </span>
         </div>
-      </div>
+      </button>
+
+      {showSettings && (
+        <SettingsSheet
+          user={user}
+          boards={boards || []}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
 
       {/* ── Widget cards ── */}
       {counts && (
@@ -262,43 +376,6 @@ export function HomeScreen() {
           )}
         </div>
       )}
-
-      {/* ── Add to group chat ── */}
-      <button
-        className="mb-px flex w-full items-center gap-3 rounded-t-xl px-3.5 py-3"
-        style={{ background: "var(--bg-card)" }}
-      >
-        <div
-          className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] text-[14px]"
-          style={{ background: "var(--accent-green)", color: "#fff" }}
-        >
-          ＋
-        </div>
-        <div className="flex-1 text-left">
-          <div className="text-[13px] font-medium">{t("addToGroupChat")}</div>
-          <div className="text-[11px] leading-tight" style={{ color: "var(--text-muted)" }}>
-            {t("addToGroupChatDesc")}
-          </div>
-        </div>
-        <span className="text-[12px] tabular-nums" style={{ color: "var(--text-dim)" }}>
-          {boardCount}/2
-        </span>
-      </button>
-
-      {/* ── Add task ── */}
-      <button
-        className="mb-4 flex w-full items-center gap-3 rounded-b-xl border-t px-3.5 py-3"
-        style={{ background: "var(--bg-card)", borderColor: "var(--border-separator)" }}
-        onClick={() => setView({ type: "filter", filter: "inbox", label: t("inbox") })}
-      >
-        <div
-          className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] text-[16px] font-bold"
-          style={{ color: "var(--accent-green)" }}
-        >
-          +
-        </div>
-        <span className="text-[13px] font-medium">{t("addTask")}</span>
-      </button>
 
       {/* ── Smart filters ── */}
       <div className="mb-4 overflow-hidden rounded-xl" style={{ background: "var(--bg-card)" }}>
@@ -374,12 +451,15 @@ export function HomeScreen() {
         </div>
       )}
 
-      <FabMenu
-        onNewTask={() => setView({ type: "filter", filter: "inbox", label: t("inbox") })}
-        onNewProject={() => {}}
-        projectCount={projectsList?.length || 0}
-        projectLimit={3}
-      />
+      <FabMenu onNewTask={() => setShowDraft(true)} />
+
+      {showDraft && (
+        <TaskDetailSheet
+          taskId={null}
+          chatId={null}
+          onClose={() => setShowDraft(false)}
+        />
+      )}
     </div>
   );
 }

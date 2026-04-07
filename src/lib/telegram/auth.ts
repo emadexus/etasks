@@ -61,12 +61,12 @@ export function getAuthFromRequest(req: Request) {
   if (adminAuth) return adminAuth;
 
   const initData = req.headers.get("x-telegram-init-data");
-  if (!initData) {
+  if (!initData || (process.env.NODE_ENV === "development" && initData === "dev")) {
     if (process.env.NODE_ENV === "development") {
       return {
         userId: BigInt(process.env.DEV_TELEGRAM_USER_ID || "247463948"),
-        username: process.env.DEV_TELEGRAM_USERNAME || "dev_user",
-        firstName: process.env.DEV_TELEGRAM_FIRST_NAME || "Dev",
+        username: process.env.DEV_TELEGRAM_USERNAME || "emadex",
+        firstName: process.env.DEV_TELEGRAM_FIRST_NAME || "E",
       };
     }
     console.warn("No x-telegram-init-data header");

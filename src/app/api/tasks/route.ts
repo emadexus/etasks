@@ -26,7 +26,13 @@ export async function GET(req: NextRequest) {
   const assigneeId = req.nextUrl.searchParams.get("assigneeId");
   const sortBy = req.nextUrl.searchParams.get("sortBy") || "newest";
 
-  const conditions = [eq(tasks.boardId, board.id), sql`${tasks.archivedAt} IS NULL`];
+  const showArchived = req.nextUrl.searchParams.get("archived") === "true";
+  const conditions = [eq(tasks.boardId, board.id)];
+  if (showArchived) {
+    conditions.push(sql`${tasks.archivedAt} IS NOT NULL`);
+  } else {
+    conditions.push(sql`${tasks.archivedAt} IS NULL`);
+  }
   if (status) conditions.push(eq(tasks.status, status as any));
   if (priority) conditions.push(eq(tasks.priority, priority as any));
   if (assigneeId) conditions.push(eq(tasks.assigneeId, assigneeId));

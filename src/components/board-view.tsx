@@ -172,7 +172,9 @@ export function BoardView() {
         ))}
       </div>
 
-      <TaskDetailSheet taskId={selectedTaskId} chatId={chatId} onClose={() => setSelectedTaskId(null)} />
+      {selectedTaskId && (
+        <TaskDetailSheet taskId={selectedTaskId} chatId={chatId} onClose={() => setSelectedTaskId(null)} />
+      )}
     </div>
   );
 }

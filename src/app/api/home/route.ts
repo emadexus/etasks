@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/telegram/auth";
 import { getUserProjects, getSmartFilterCounts } from "@/lib/db/queries";
 import { db } from "@/lib/db";
-import { boards, members } from "@/lib/db/schema";
+import { boards, members, users } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 
 /** Combined endpoint: returns user profile, counts, boards, and projects in one request. */
@@ -11,7 +11,8 @@ export async function GET(req: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Run all queries in parallel
-  const [userProjects, counts, userBoards] = await Promise.all([
+  const [userRow, userProjects, counts, userBoards] = await Promise.all([
+    db.select().from(users).where(eq(users.id, auth.dbUserId)).limit(1).then(r => r[0]),
     getUserProjects(auth.dbUserId),
     getSmartFilterCounts(auth.dbUserId),
     db.select({ board: boards })
@@ -25,6 +26,7 @@ export async function GET(req: NextRequest) {
       id: auth.dbUserId,
       firstName: auth.firstName,
       username: auth.username,
+      language: userRow?.language || "en",
       projectCount: userProjects.length,
       projectLimit: 3,
       boardCount: userBoards.length,
@@ -36,6 +38,7 @@ export async function GET(req: NextRequest) {
       name: r.board.name,
       chatId: r.board.telegramChatId.toString(),
       photoUrl: r.board.photoUrl || null,
+      language: r.board.language,
     })),
     projects: userProjects,
   });

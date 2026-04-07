@@ -6,6 +6,11 @@ import type { ReactNode } from "react";
 const CACHE_KEY = "etasks-swr-cache";
 
 function localStorageProvider() {
+  // In development, always start fresh to avoid stale auth issues
+  if (process.env.NODE_ENV === "development") {
+    try { localStorage.removeItem(CACHE_KEY); } catch {}
+  }
+
   // Load cached data from localStorage on init
   let map: Map<string, any>;
   try {
@@ -56,6 +61,10 @@ function localStorageProvider() {
 }
 
 export function SWRProvider({ children }: { children: ReactNode }) {
+  // In dev, skip localStorage cache entirely — avoids stale auth issues
+  if (process.env.NODE_ENV === "development") {
+    return <SWRConfig value={{}}>{children}</SWRConfig>;
+  }
   return (
     <SWRConfig value={{ provider: localStorageProvider }}>
       {children}

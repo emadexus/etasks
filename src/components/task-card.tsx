@@ -12,6 +12,8 @@ interface TaskCardProps {
     dateDue: string | null;
     datePlanned: string | null;
     assigneeId: string | null;
+    tags: string | null;
+    checklist: string | null;
   };
   assignee: {
     firstName: string;
@@ -134,6 +136,28 @@ export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }
                   💬 {commentCount}
                 </span>
               )}
+              {(() => {
+                const cl: { done: boolean }[] = task.checklist ? (typeof task.checklist === "string" ? JSON.parse(task.checklist) : task.checklist) : [];
+                if (cl.length === 0) return null;
+                const done = cl.filter(c => c.done).length;
+                return (
+                  <span className="text-[10px]" style={{ color: done === cl.length ? "var(--accent-green)" : "var(--text-dim)" }}>
+                    ☑ {done}/{cl.length}
+                  </span>
+                );
+              })()}
+              {(() => {
+                const tags: string[] = task.tags ? (typeof task.tags === "string" ? JSON.parse(task.tags) : task.tags) : [];
+                return tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded px-1.5 py-px text-[9px] font-medium"
+                    style={{ background: "var(--accent-purple-bg)", color: "var(--accent-purple)" }}
+                  >
+                    {tag}
+                  </span>
+                ));
+              })()}
             </div>
           )}
         </div>

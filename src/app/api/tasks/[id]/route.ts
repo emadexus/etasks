@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/telegram/auth";
 import { db } from "@/lib/db";
-import { tasks, taskReminders, comments } from "@/lib/db/schema";
+import { tasks, taskReminders, comments, members, boards } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getTaskWithDetails, getMemberByTelegramId, getRemindersForTask } from "@/lib/db/queries";
 import { cancelReminders, scheduleReminders, toggleReminder } from "@/lib/qstash/reminders";
 import { createNextRecurrence } from "@/lib/recurrence";
+import { notifyGroup, formatAssigneeChanged } from "@/lib/telegram/notify";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -37,19 +38,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const task = result.task;
 
-  // Authorization: personal task → check ownerId; board task → check membership
-  if (task.boardId) {
+  // Authorization: task owner can always edit; board tasks require membership
+  const isOwner = task.ownerId === auth.dbUserId;
+  if (task.boardId && !isOwner) {
     const member = await getMemberByTelegramId(task.boardId, auth.userId);
     if (!member) return NextResponse.json({ error: "Not a member" }, { status: 403 });
-    const isCreator = task.createdBy === member.id;
-    const isAdmin = member.role === "admin";
-    if (!isCreator && !isAdmin) {
-      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
-    }
-  } else {
-    if (task.ownerId !== auth.dbUserId) {
-      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
-    }
+  } else if (!task.boardId && !isOwner) {
+    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
   const body = await req.json();
@@ -65,6 +60,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.notifyAt !== undefined) updates.notifyAt = body.notifyAt ? new Date(body.notifyAt) : null;
   if (body.recurrenceRule !== undefined) updates.recurrenceRule = body.recurrenceRule;
   if (body.projectId !== undefined) updates.projectId = body.projectId || null;
+  if (body.tags !== undefined) updates.tags = body.tags ? JSON.stringify(body.tags) : null;
+  if (body.checklist !== undefined) updates.checklist = body.checklist ? JSON.stringify(body.checklist) : null;
   if (body.archivedAt !== undefined) updates.archivedAt = body.archivedAt ? new Date(body.archivedAt) : null;
 
   // Move task to a different board (or to personal inbox with boardId=null)
@@ -74,6 +71,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       updates.assigneeId = null;
       updates.createdBy = null;
     } else if (body.boardId !== task.boardId) {
+      // Verify user is a member of the destination board
+      const destMember = await getMemberByTelegramId(body.boardId, auth.userId);
+      if (!destMember) {
+        return NextResponse.json({ error: "Not a member of destination board" }, { status: 403 });
+      }
       updates.boardId = body.boardId;
       updates.assigneeId = null;
       updates.createdBy = null;
@@ -117,6 +119,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
+  // Notify group on assignment change
+  if (body.assigneeId !== undefined && task.boardId) {
+    try {
+      const board = await db.select().from(boards).where(eq(boards.id, task.boardId)).limit(1);
+      if (board[0]) {
+        const lang = board[0].language || "en";
+        let assigneeName: string | null = null;
+        if (body.assigneeId) {
+          const assignee = await db.select().from(members).where(eq(members.id, body.assigneeId)).limit(1);
+          assigneeName = assignee[0]?.username ? `@${assignee[0].username}` : assignee[0]?.firstName || null;
+        }
+        const changedBy = auth.username ? `@${auth.username}` : auth.firstName;
+        notifyGroup(board[0].telegramChatId, formatAssigneeChanged(id, task.title, assigneeName, changedBy, lang));
+      }
+    } catch (e) {
+      console.error("Failed to notify on assignment:", e);
+    }
+  }
+
   // Handle reminder toggles: { reminders: { "1h": true, "7d": false } }
   if (body.reminders) {
     const taskDeadline = body.dateDue ? new Date(body.dateDue) : task.dateDue;
@@ -138,19 +159,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const result = await getTaskWithDetails(id);
   if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Authorization: personal task → check ownerId; board task → check membership
-  if (result.task.boardId) {
+  // Authorization: task owner can always delete; board tasks require membership
+  const isOwner = result.task.ownerId === auth.dbUserId;
+  if (result.task.boardId && !isOwner) {
     const member = await getMemberByTelegramId(result.task.boardId, auth.userId);
     if (!member) return NextResponse.json({ error: "Not a member" }, { status: 403 });
-    const isCreator = result.task.createdBy === member.id;
-    const isAdmin = member.role === "admin";
-    if (!isCreator && !isAdmin) {
-      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
-    }
-  } else {
-    if (result.task.ownerId !== auth.dbUserId) {
-      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
-    }
+  } else if (!result.task.boardId && !isOwner) {
+    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
   await cancelReminders(id);

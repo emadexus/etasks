@@ -9,7 +9,9 @@ import { useCallback, useMemo, useRef, useEffect } from "react";
 function useAuthFetcher() {
   const { initData } = useTelegram();
   const initDataRef = useRef(initData);
-  useEffect(() => { initDataRef.current = initData; }, [initData]);
+  // Sync update during render — useEffect is too late (runs after render,
+  // so SWR can call the fetcher before the effect updates the ref)
+  initDataRef.current = initData;
 
   return useCallback(async (url: string) => {
     const currentInitData = initDataRef.current;
@@ -29,7 +31,7 @@ function useAuthReady() {
 function useAuthMutate() {
   const { initData } = useTelegram();
   const initDataRef = useRef(initData);
-  useEffect(() => { initDataRef.current = initData; }, [initData]);
+  initDataRef.current = initData;
 
   return useCallback(async (url: string, method: string, body?: object) => {
     const currentInitData = initDataRef.current;
@@ -95,53 +97,46 @@ const swrOpts = {
   dedupingInterval: 0,
 };
 
-// Paused SWR options: always provide the key (for cache hits),
-// but pause fetching until auth is ready. This lets localStorage
-// cache return data instantly on app open.
-function usePausedOpts(extraOpts?: Record<string, any>) {
+function useKeyWhenReady(key: string | null) {
   const authReady = useAuthReady();
-  return useMemo(() => ({
-    ...swrOpts,
-    ...extraOpts,
-    isPaused: () => !authReady,
-  }), [authReady]);
+  return authReady ? key : null;
 }
 
 // ─── Existing board-scoped hooks ───
 
 export function useMembers(chatId: string | null) {
   const fetcher = useAuthFetcher();
-  const opts = usePausedOpts();
-  return useSWR(chatId ? `/api/members?chatId=${chatId}` : null, fetcher, opts);
+  const key = useKeyWhenReady(chatId ? `/api/members?chatId=${chatId}` : null);
+  return useSWR(key, fetcher, swrOpts);
 }
 
 export function useTasks(chatId: string | null, filters?: Record<string, string>) {
   const fetcher = useAuthFetcher();
-  const opts = usePausedOpts({ keepPreviousData: true });
+  const authReady = useAuthReady();
   const key = useMemo(() => {
-    if (!chatId) return null;
+    if (!authReady || !chatId) return null;
     const params = new URLSearchParams({ chatId, ...filters });
     return `/api/tasks?${params}`;
-  }, [chatId, filters]);
-  return useSWR(key, fetcher, opts);
+  }, [authReady, chatId, filters]);
+  return useSWR(key, fetcher, { ...swrOpts, keepPreviousData: true });
 }
 
 export function useTaskDetail(taskId: string | null) {
   const fetcher = useAuthFetcher();
-  const opts = usePausedOpts({ keepPreviousData: true });
-  return useSWR(taskId ? `/api/tasks/${taskId}` : null, fetcher, opts);
+  const key = useKeyWhenReady(taskId ? `/api/tasks/${taskId}` : null);
+  return useSWR(key, fetcher, { ...swrOpts, keepPreviousData: true });
 }
 
 export function useComments(taskId: string | null) {
   const fetcher = useAuthFetcher();
-  const opts = usePausedOpts({ keepPreviousData: true });
-  return useSWR(taskId ? `/api/comments?taskId=${taskId}` : null, fetcher, opts);
+  const key = useKeyWhenReady(taskId ? `/api/comments?taskId=${taskId}` : null);
+  return useSWR(key, fetcher, { ...swrOpts, keepPreviousData: true });
 }
 
 export function useBoards() {
   const fetcher = useAuthFetcher();
-  const opts = usePausedOpts();
-  return useSWR("/api/boards", fetcher, opts);
+  const key = useKeyWhenReady("/api/boards");
+  return useSWR(key, fetcher, swrOpts);
 }
 
 export function useTaskActions(chatId: string | null) {
@@ -184,39 +179,63 @@ export function useTaskActions(chatId: string | null) {
 /** Combined home data: user + counts + boards + projects in one request. */
 export function useHome() {
   const fetcher = useAuthFetcher();
-  const opts = usePausedOpts();
-  return useSWR("/api/home", fetcher, opts);
+  const key = useKeyWhenReady("/api/home");
+  return useSWR(key, fetcher, swrOpts);
 }
 
 export function useUser() {
   const fetcher = useAuthFetcher();
-  const opts = usePausedOpts();
-  return useSWR("/api/user", fetcher, opts);
+  const key = useKeyWhenReady("/api/user");
+  return useSWR(key, fetcher, swrOpts);
 }
 
 export function useSmartFilterCounts() {
   const fetcher = useAuthFetcher();
-  const opts = usePausedOpts();
-  return useSWR("/api/user/counts", fetcher, opts);
+  const key = useKeyWhenReady("/api/user/counts");
+  return useSWR(key, fetcher, swrOpts);
 }
 
 export function useFilteredTasks(filter: string, projectId?: string, chatId?: string) {
   const fetcher = useAuthFetcher();
-  const opts = usePausedOpts({ keepPreviousData: true });
+  const authReady = useAuthReady();
   const key = useMemo(() => {
-    if (!filter) return null;
+    if (!authReady || !filter) return null;
     const params = new URLSearchParams({ filter });
     if (projectId) params.set("projectId", projectId);
     if (chatId) params.set("chatId", chatId);
     return `/api/user/tasks?${params}`;
-  }, [filter, projectId, chatId]);
-  return useSWR(key, fetcher, opts);
+  }, [authReady, filter, projectId, chatId]);
+  return useSWR(key, fetcher, { ...swrOpts, keepPreviousData: true });
 }
 
 export function useProjects() {
   const fetcher = useAuthFetcher();
-  const opts = usePausedOpts();
-  return useSWR("/api/projects", fetcher, opts);
+  const key = useKeyWhenReady("/api/projects");
+  return useSWR(key, fetcher, swrOpts);
+}
+
+export function useUserActions() {
+  const api = useAuthMutate();
+
+  return useMemo(() => ({
+    updateLanguage: async (language: string) => {
+      const result = await api("/api/user", "PATCH", { language });
+      revalidateHome();
+      return result;
+    },
+  }), [api]);
+}
+
+export function useBoardActions() {
+  const api = useAuthMutate();
+
+  return useMemo(() => ({
+    updateBoardLanguage: async (boardId: string, language: string) => {
+      const result = await api("/api/boards", "PATCH", { boardId, language });
+      revalidateHome();
+      return result;
+    },
+  }), [api]);
 }
 
 export function useProjectActions() {
