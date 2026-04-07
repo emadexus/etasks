@@ -4,9 +4,8 @@ import { db } from "@/lib/db";
 import { tasks, members, boards, users, comments, taskAttachments } from "@/lib/db/schema";
 import { eq, and, desc, asc, sql, gte, lt, isNull, or, like } from "drizzle-orm";
 import { getBoardByChatId, upsertMember, getOrCreateUser } from "@/lib/db/queries";
-import { notifyGroup, notifyUser, formatNewTask, botT } from "@/lib/telegram/notify";
+import { notifyGroup, notifyUser, formatNewTask } from "@/lib/telegram/notify";
 import { scheduleReminders } from "@/lib/qstash/reminders";
-import type { InlineKeyboardMarkup } from "grammy/types";
 
 /**
  * Admin API: Full task management.
@@ -241,18 +240,12 @@ export async function POST(req: NextRequest) {
     // Notify group & assignee if requested (default: true)
     if (shouldNotify !== false) {
       if (assigneeMember) {
-        await notifyUser(BigInt(assigneeTelegramId), formatNewTask(title, priority || "medium", assigneeUsername, dueDate, lang));
+        await notifyUser(BigInt(assigneeTelegramId), formatNewTask(task.id, title, priority || "medium", assigneeUsername, dueDate, lang));
       }
 
-      const taskKeyboard: InlineKeyboardMarkup = {
-        inline_keyboard: [[
-          { text: botT("openTask", lang), url: `https://t.me/e_task_bot/open?startapp=task${task.id}` }
-        ]]
-      };
       await notifyGroup(
         board.telegramChatId,
-        formatNewTask(title, priority || "medium", assigneeUsername, dueDate, lang),
-        taskKeyboard
+        formatNewTask(task.id, title, priority || "medium", assigneeUsername, dueDate, lang),
       );
     }
 

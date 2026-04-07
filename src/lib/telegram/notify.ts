@@ -66,18 +66,20 @@ export async function notifyUser(userId: bigint, text: string) {
   }
 }
 
-export function formatNewTask(title: string, priority: string, assigneeUsername: string | null, deadline: Date | null, lang: string = "en") {
+export function formatNewTask(taskId: string, title: string, priority: string, assigneeUsername: string | null, deadline: Date | null, lang: string = "en") {
+  const linked = taskLink(taskId, title);
   const assignee = assigneeUsername ? `@${assigneeUsername}` : (lang === "ru" ? "не назначен" : "unassigned");
   const due = deadline
     ? deadline.toLocaleDateString(lang === "ru" ? "ru-RU" : "en-US", { month: "short", day: "numeric" })
     : "";
   const dueStr = due ? ` · ${lang === "ru" ? "до" : "due"} ${due}` : "";
-  return `<b>${botT("newTask", lang)}</b>\n${title}\n● ${priority} · ${assignee}${dueStr}`;
+  return `<b>${botT("newTask", lang)}</b>\n${linked}\n● ${priority} · ${assignee}${dueStr}`;
 }
 
-export function formatComment(authorName: string, taskTitle: string, commentText: string, lang: string = "en") {
+export function formatComment(taskId: string, authorName: string, taskTitle: string, commentText: string, lang: string = "en") {
+  const linked = taskLink(taskId, taskTitle);
   const preview = commentText.length > 100 ? commentText.slice(0, 100) + "..." : commentText;
-  return `<b>${authorName}</b> ${botT("commentedOn", lang)} <b>${taskTitle}</b>\n<i>"${preview}"</i>`;
+  return `<b>${authorName}</b> ${botT("commentedOn", lang)} <b>${linked}</b>\n<i>"${preview}"</i>`;
 }
 
 function taskLink(taskId: string, title: string): string {
@@ -95,7 +97,8 @@ export function formatAssigneeChanged(taskId: string, taskTitle: string, assigne
   return `📋 <b>${linked}</b>\n${msg}\n<i>${lang === "ru" ? "от" : "by"} ${changedByName}</i>`;
 }
 
-export function formatDeadlineReminder(taskTitle: string, timeLeft: string, assigneeUsername: string | null, lang: string = "en") {
+export function formatDeadlineReminder(taskId: string, taskTitle: string, timeLeft: string, assigneeUsername: string | null, lang: string = "en") {
+  const linked = taskLink(taskId, taskTitle);
   const assignee = assigneeUsername ? `@${assigneeUsername}` : "";
-  return `⏰ <b>${botT("deadlineReminder", lang)}</b>\n${taskTitle}\n${botT("dueIn", lang)} ${timeLeft} ${assignee}`;
+  return `⏰ <b>${botT("deadlineReminder", lang)}</b>\n${linked}\n${botT("dueIn", lang)} ${timeLeft} ${assignee}`;
 }

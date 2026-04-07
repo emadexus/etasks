@@ -56,6 +56,7 @@ async function processReminders() {
     const timeLeft = hoursLeft >= 24 ? `${Math.round(hoursLeft / 24)}d` : `${hoursLeft}h`;
 
     const message = formatDeadlineReminder(
+      task.id,
       task.title,
       timeLeft,
       assignee?.username || null,

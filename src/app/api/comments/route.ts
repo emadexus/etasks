@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     if (board[0]) {
       const lang = board[0].language || "en";
-      const message = formatComment(member.firstName, taskResult.task.title, text, lang);
+      const message = formatComment(taskResult.task.id, member.firstName, taskResult.task.title, text, lang);
       await notifyGroup(board[0].telegramChatId, message);
 
       if (taskResult.assignee && taskResult.assignee.id !== member.id) {

@@ -4,9 +4,8 @@ import { getBoardByChatId, getMemberByTelegramId, upsertMember } from "@/lib/db/
 import { db } from "@/lib/db";
 import { tasks, members, comments, boards } from "@/lib/db/schema";
 import { eq, and, desc, asc, sql, isNull } from "drizzle-orm";
-import { notifyGroup, notifyUser, formatNewTask, botT } from "@/lib/telegram/notify";
+import { notifyGroup, notifyUser, formatNewTask } from "@/lib/telegram/notify";
 import { scheduleReminders } from "@/lib/qstash/reminders";
-import type { InlineKeyboardMarkup } from "grammy/types";
 
 export async function GET(req: NextRequest) {
   const auth = getAuthFromRequest(req);
@@ -109,19 +108,13 @@ export async function POST(req: NextRequest) {
       const assignee = await db.select().from(members).where(eq(members.id, assigneeId)).limit(1);
       if (assignee[0]) {
         assigneeUsername = assignee[0].username;
-        await notifyUser(assignee[0].telegramUserId, formatNewTask(title, priority || "medium", assigneeUsername, dueDate, lang));
+        await notifyUser(assignee[0].telegramUserId, formatNewTask(task.id, title, priority || "medium", assigneeUsername, dueDate, lang));
       }
     }
 
-    const taskKeyboard: InlineKeyboardMarkup = {
-      inline_keyboard: [[
-        { text: botT("openTask", lang), url: `https://t.me/e_task_bot/open?startapp=task${task.id}` }
-      ]]
-    };
     await notifyGroup(
       board.telegramChatId,
-      formatNewTask(title, priority || "medium", assigneeUsername, dueDate, lang),
-      taskKeyboard
+      formatNewTask(task.id, title, priority || "medium", assigneeUsername, dueDate, lang),
     );
 
     return NextResponse.json(task, { status: 201 });
