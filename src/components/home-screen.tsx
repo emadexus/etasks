@@ -14,13 +14,13 @@ type ViewState =
   | { type: "board"; chatId: string; label: string };
 
 const smartFilters = [
-  { key: "all",       labelKey: "all" as const,       color: "#5856d6", icon: "grid" as const },
-  { key: "inbox",     labelKey: "inbox" as const,     color: "#ff9500", icon: "inbox" as const },
-  { key: "today",     labelKey: "today" as const,     color: "#30d158", icon: "today" as const },
-  { key: "tomorrow",  labelKey: "tomorrow" as const,  color: "#ff453a", icon: "sunrise" as const },
-  { key: "next7days", labelKey: "next7days" as const, color: "#5856d6", icon: "calendar" as const },
-  { key: "completed", labelKey: "completed" as const, color: "#30d158", icon: "check" as const },
-  { key: "archived",  labelKey: "archived" as const,  color: "#8e8e93", icon: "archive" as const },
+  { key: "all",       labelKey: "all" as const,       color: "#6366f1", icon: "grid" as const },
+  { key: "inbox",     labelKey: "inbox" as const,     color: "#fb923c", icon: "inbox" as const },
+  { key: "today",     labelKey: "today" as const,     color: "#34d399", icon: "today" as const },
+  { key: "tomorrow",  labelKey: "tomorrow" as const,  color: "#f87171", icon: "sunrise" as const },
+  { key: "next7days", labelKey: "next7days" as const, color: "#6366f1", icon: "calendar" as const },
+  { key: "completed", labelKey: "completed" as const, color: "#34d399", icon: "check" as const },
+  { key: "archived",  labelKey: "archived" as const,  color: "#6e6879", icon: "archive" as const },
 ];
 
 function FilterIcon({ color, icon }: { color: string; icon: string }) {
@@ -224,7 +224,7 @@ export function HomeScreen() {
         <div className="mb-4 flex gap-2.5">
           <button
             className="flex flex-1 flex-col rounded-xl px-3.5 py-3 transition-colors active:bg-white/5"
-            style={{ background: "rgba(48, 209, 88, 0.08)", border: "1px solid rgba(48, 209, 88, 0.12)" }}
+            style={{ background: "rgba(52, 211, 153, 0.08)", border: "1px solid rgba(52, 211, 153, 0.15)" }}
             onClick={() => setView({ type: "filter", filter: "today", label: t("today") })}
           >
             <span className="text-[22px] font-bold" style={{ color: "var(--accent-green)" }}>
@@ -236,7 +236,7 @@ export function HomeScreen() {
           </button>
           <button
             className="flex flex-1 flex-col rounded-xl px-3.5 py-3 transition-colors active:bg-white/5"
-            style={{ background: "rgba(255, 149, 0, 0.08)", border: "1px solid rgba(255, 149, 0, 0.12)" }}
+            style={{ background: "rgba(251, 146, 60, 0.08)", border: "1px solid rgba(251, 146, 60, 0.15)" }}
             onClick={() => setView({ type: "filter", filter: "inbox", label: t("inbox") })}
           >
             <span className="text-[22px] font-bold" style={{ color: "var(--accent-orange)" }}>
@@ -249,7 +249,7 @@ export function HomeScreen() {
           {(counts.all - counts.today - counts.inbox) > 0 && (
             <button
               className="flex flex-1 flex-col rounded-xl px-3.5 py-3 transition-colors active:bg-white/5"
-              style={{ background: "rgba(88, 86, 214, 0.08)", border: "1px solid rgba(88, 86, 214, 0.12)" }}
+              style={{ background: "rgba(99, 102, 241, 0.08)", border: "1px solid rgba(99, 102, 241, 0.15)" }}
               onClick={() => setView({ type: "filter", filter: "all", label: t("all") })}
             >
               <span className="text-[22px] font-bold" style={{ color: "var(--accent-blue)" }}>

@@ -3,27 +3,27 @@
 @tailwind utilities;
 
 :root {
-  --bg-primary: #1c1c1e;
-  --bg-secondary: #2c2c2e;
-  --bg-card: rgba(255, 255, 255, 0.04);
-  --border-card: rgba(255, 255, 255, 0.08);
-  --border-separator: rgba(255, 255, 255, 0.06);
-  --text-primary: #f5f5f7;
-  --text-secondary: #a1a1a6;
-  --text-muted: #6e6e73;
-  --text-dim: #48484a;
-  --accent-blue: #5856d6;
-  --accent-blue-bg: rgba(88, 86, 214, 0.15);
-  --accent-orange: #ff9500;
-  --accent-orange-bg: rgba(255, 149, 0, 0.12);
-  --accent-yellow: #ffd60a;
-  --accent-yellow-bg: rgba(255, 214, 10, 0.10);
-  --accent-red: #ff453a;
-  --accent-red-bg: rgba(255, 69, 58, 0.12);
-  --accent-purple: #7C3AED;
-  --accent-purple-bg: rgba(124, 58, 237, 0.15);
-  --accent-green: #30d158;
-  --accent-green-bg: rgba(48, 209, 88, 0.12);
+  --bg-primary: #13111C;
+  --bg-secondary: #1e1a2e;
+  --bg-card: rgba(255, 255, 255, 0.05);
+  --border-card: rgba(255, 255, 255, 0.09);
+  --border-separator: rgba(255, 255, 255, 0.07);
+  --text-primary: #f0eef5;
+  --text-secondary: #a8a3b3;
+  --text-muted: #6e6879;
+  --text-dim: #4a4555;
+  --accent-blue: #6366f1;
+  --accent-blue-bg: rgba(99, 102, 241, 0.15);
+  --accent-orange: #fb923c;
+  --accent-orange-bg: rgba(251, 146, 60, 0.12);
+  --accent-yellow: #facc15;
+  --accent-yellow-bg: rgba(250, 204, 21, 0.10);
+  --accent-red: #f87171;
+  --accent-red-bg: rgba(248, 113, 113, 0.10);
+  --accent-purple: #8B5CF6;
+  --accent-purple-bg: rgba(139, 92, 246, 0.15);
+  --accent-green: #34d399;
+  --accent-green-bg: rgba(52, 211, 153, 0.12);
 }
 
 html, body {
