@@ -213,6 +213,7 @@ export function HomeScreen() {
 
   const [view, setView] = useState<ViewState>({ type: "home" });
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
+  const [consumedTaskId, setConsumedTaskId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showDraft, setShowDraft] = useState(false);
 
@@ -246,6 +247,7 @@ export function HomeScreen() {
     if (view.type !== "home") return;
 
     setDeepLinkHandled(true);
+    setConsumedTaskId(openTaskId);
     const task = deepLinkTask.task;
     if (task.boardId && boards) {
       const board = (boards as any[]).find((b: any) => b.id === task.boardId);
@@ -296,8 +298,8 @@ export function HomeScreen() {
     return (
       <TaskListView
         context={view}
-        openTaskId={deepLinkHandled ? undefined : (openTaskId || undefined)}
-        onBack={() => setView({ type: "home" })}
+        openTaskId={consumedTaskId || undefined}
+        onBack={() => { setView({ type: "home" }); setConsumedTaskId(null); }}
       />
     );
   }
