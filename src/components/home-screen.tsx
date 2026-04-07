@@ -14,22 +14,101 @@ type ViewState =
   | { type: "board"; chatId: string; label: string };
 
 const smartFilters = [
-  { key: "all",       labelKey: "all" as const,       color: "#5856d6", glyph: "●" },
-  { key: "inbox",     labelKey: "inbox" as const,     color: "#ff9500", glyph: "▣" },
-  { key: "today",     labelKey: "today" as const,     color: "#30d158", glyph: "6" },
-  { key: "tomorrow",  labelKey: "tomorrow" as const,  color: "#ff453a", glyph: "◈" },
-  { key: "next7days", labelKey: "next7days" as const, color: "#5856d6", glyph: "▦" },
-  { key: "completed", labelKey: "completed" as const, color: "#30d158", glyph: "✓" },
-  { key: "archived",  labelKey: "archived" as const,  color: "#8e8e93", glyph: "▪" },
+  { key: "all",       labelKey: "all" as const,       color: "#5856d6", icon: "grid" as const },
+  { key: "inbox",     labelKey: "inbox" as const,     color: "#ff9500", icon: "inbox" as const },
+  { key: "today",     labelKey: "today" as const,     color: "#30d158", icon: "today" as const },
+  { key: "tomorrow",  labelKey: "tomorrow" as const,  color: "#ff453a", icon: "sunrise" as const },
+  { key: "next7days", labelKey: "next7days" as const, color: "#5856d6", icon: "calendar" as const },
+  { key: "completed", labelKey: "completed" as const, color: "#30d158", icon: "check" as const },
+  { key: "archived",  labelKey: "archived" as const,  color: "#8e8e93", icon: "archive" as const },
 ];
 
-function FilterIcon({ color, glyph }: { color: string; glyph: string }) {
+function FilterIcon({ color, icon }: { color: string; icon: string }) {
+  const size = 30;
+  const svgProps = { width: 14, height: 14, viewBox: "0 0 16 16", fill: "none", stroke: "#fff", strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+
+  const renderIcon = () => {
+    switch (icon) {
+      case "grid":
+        // 4 squares in a 2×2 grid
+        return (
+          <svg {...svgProps}>
+            <rect x="1" y="1" width="5.5" height="5.5" rx="1.2" />
+            <rect x="9.5" y="1" width="5.5" height="5.5" rx="1.2" />
+            <rect x="1" y="9.5" width="5.5" height="5.5" rx="1.2" />
+            <rect x="9.5" y="9.5" width="5.5" height="5.5" rx="1.2" />
+          </svg>
+        );
+      case "inbox":
+        // Tray with arrow down
+        return (
+          <svg {...svgProps}>
+            <path d="M8 2v7" />
+            <path d="M5.5 6.5L8 9l2.5-2.5" />
+            <path d="M1.5 10h3L6 12.5h4L11.5 10h3V13.5a1 1 0 01-1 1h-11a1 1 0 01-1-1V10z" />
+          </svg>
+        );
+      case "today":
+        // Dynamic day number
+        return (
+          <span className="text-[13px] font-bold text-white" style={{ lineHeight: 1 }}>
+            {new Date().getDate()}
+          </span>
+        );
+      case "sunrise":
+        // Sun rising above horizon
+        return (
+          <svg {...svgProps}>
+            <path d="M2 12h12" />
+            <path d="M4 10a4 4 0 018 0" />
+            <path d="M8 2v2" />
+            <path d="M3.5 5L5 6.5" />
+            <path d="M12.5 5L11 6.5" />
+          </svg>
+        );
+      case "calendar":
+        // Mini calendar with header bar and dots
+        return (
+          <svg {...svgProps}>
+            <rect x="1.5" y="2.5" width="13" height="12" rx="1.5" />
+            <path d="M1.5 6h13" />
+            <path d="M5 1v3" />
+            <path d="M11 1v3" />
+            <circle cx="5" cy="9" r="0.8" fill="#fff" stroke="none" />
+            <circle cx="8" cy="9" r="0.8" fill="#fff" stroke="none" />
+            <circle cx="11" cy="9" r="0.8" fill="#fff" stroke="none" />
+            <circle cx="5" cy="12" r="0.8" fill="#fff" stroke="none" />
+            <circle cx="8" cy="12" r="0.8" fill="#fff" stroke="none" />
+          </svg>
+        );
+      case "check":
+        // Circle with checkmark
+        return (
+          <svg {...svgProps}>
+            <circle cx="8" cy="8" r="6.5" />
+            <path d="M5.5 8l2 2 3.5-4" />
+          </svg>
+        );
+      case "archive":
+        // Box with lid
+        return (
+          <svg {...svgProps}>
+            <rect x="1" y="1.5" width="14" height="3.5" rx="1" />
+            <path d="M2.5 5v8.5a1.5 1.5 0 001.5 1.5h8a1.5 1.5 0 001.5-1.5V5" />
+            <path d="M6.5 8.5h3" />
+          </svg>
+        );
+      default:
+        return <span className="text-[13px] font-bold text-white">?</span>;
+    }
+  };
+
   return (
     <div
-      className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] text-[13px] font-bold text-white"
-      style={{ background: color }}
+      className="flex items-center justify-center rounded-[8px]"
+      style={{ background: color, width: size, height: size }}
     >
-      {glyph}
+      {renderIcon()}
     </div>
   );
 }
@@ -230,7 +309,7 @@ export function HomeScreen() {
             style={i > 0 ? { borderTop: "1px solid var(--border-separator)" } : undefined}
             onClick={() => setView({ type: "filter", filter: f.key, label: t(f.labelKey) })}
           >
-            <FilterIcon color={f.color} glyph={f.glyph} />
+            <FilterIcon color={f.color} icon={f.icon} />
             <span className="flex-1 text-left text-[14px] font-medium">{t(f.labelKey)}</span>
             <span className="mr-1 text-[14px] tabular-nums" style={{ color: "var(--text-dim)" }}>
               {counts?.[f.key as keyof typeof counts] ?? 0}
