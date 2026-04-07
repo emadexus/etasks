@@ -87,6 +87,7 @@ export const taskReminders = pgTable("task_reminders", {
   taskId: uuid("task_id").notNull().references(() => tasks.id),
   offsetLabel: text("offset_label").notNull(),
   remindAt: timestamp("remind_at").notNull(),
+  /** @deprecated kept for DB compat, no longer used */
   qstashMessageId: text("qstash_message_id"),
   sent: boolean("sent").notNull().default(false),
 });
