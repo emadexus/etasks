@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useTaskDetail, useComments, useTaskActions, useMembers, useAttachments, useAttachmentActions, useHome } from "@/hooks/use-board";
 import { useTelegram } from "./telegram-provider";
 import { CommentThread } from "./comment-thread";
@@ -54,14 +55,20 @@ function AssigneePicker({ assignee, members, onChange }: {
   onChange: (memberId: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const triggerRef = useRef<HTMLSpanElement>(null);
 
   const handleOpen = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const right = window.innerWidth - rect.right;
+      if (spaceBelow < 200) {
+        setPos({ bottom: window.innerHeight - rect.top + 4, right });
+      } else {
+        setPos({ top: rect.bottom + 4, right });
+      }
     }
     setOpen(!open);
   };
@@ -75,11 +82,11 @@ function AssigneePicker({ assignee, members, onChange }: {
       >
         {assignee ? `@${assignee.username || assignee.firstName}` : t("unassigned")}
       </span>
-      {open && pos && (
+      {open && pos && createPortal(
         <>
-          <div className="fixed inset-0 z-[55]" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
           <div
-            className="fixed z-[60] min-w-[160px] overflow-hidden rounded-xl p-1 shadow-xl"
+            className="fixed z-[101] min-w-[160px] overflow-hidden rounded-xl p-1 shadow-xl"
             style={{ top: pos.top, right: pos.right, background: "var(--bg-secondary)", border: "1px solid var(--border-card)" }}
           >
             <button
@@ -104,7 +111,8 @@ function AssigneePicker({ assignee, members, onChange }: {
               </div>
             )}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </span>
   );
@@ -116,7 +124,7 @@ function BoardPicker({ currentBoardId, boards, onMove }: {
   onMove: (boardId: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   const triggerRef = useRef<HTMLSpanElement>(null);
 
   const currentLabel = currentBoardId
@@ -127,7 +135,13 @@ function BoardPicker({ currentBoardId, boards, onMove }: {
     e.stopPropagation();
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const right = window.innerWidth - rect.right;
+      if (spaceBelow < 200) {
+        setPos({ bottom: window.innerHeight - rect.top + 4, right });
+      } else {
+        setPos({ top: rect.bottom + 4, right });
+      }
     }
     setOpen(!open);
   };
@@ -141,11 +155,11 @@ function BoardPicker({ currentBoardId, boards, onMove }: {
       >
         {currentLabel} ›
       </span>
-      {open && pos && (
+      {open && pos && createPortal(
         <>
-          <div className="fixed inset-0 z-[55]" onClick={() => setOpen(false)} />
+          <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
           <div
-            className="fixed z-[60] min-w-[180px] overflow-hidden rounded-xl p-1 shadow-xl"
+            className="fixed z-[101] min-w-[180px] overflow-hidden rounded-xl p-1 shadow-xl"
             style={{ top: pos.top, right: pos.right, background: "var(--bg-secondary)", border: "1px solid var(--border-card)" }}
           >
             {/* Personal inbox option */}
@@ -181,7 +195,8 @@ function BoardPicker({ currentBoardId, boards, onMove }: {
               </div>
             )}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </span>
   );
