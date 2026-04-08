@@ -72,11 +72,12 @@ function revalidateAttachments() {
 }
 
 const swrOpts = {
-  revalidateOnFocus: false,
+  revalidateOnFocus: true,
+  refreshInterval: 5000,
   shouldRetryOnError: true,
   errorRetryCount: 3,
   errorRetryInterval: 1000,
-  dedupingInterval: 0,
+  dedupingInterval: 2000,
 };
 
 function useKeyWhenReady(key: string | null) {
