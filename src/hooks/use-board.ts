@@ -50,7 +50,7 @@ function useAuthMutate() {
 
 const swrOpts = {
   revalidateOnFocus: true,
-  refreshInterval: 5000,
+  refreshInterval: 3000,
   shouldRetryOnError: true,
   errorRetryCount: 3,
   errorRetryInterval: 1000,
