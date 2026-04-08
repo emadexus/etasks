@@ -63,7 +63,7 @@ export function CommentThread({ comments, onAdd }: CommentThreadProps) {
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           disabled={loading} />
-        <button className="flex h-8 w-8 items-center justify-center rounded-lg text-[14px] text-white"
+        <button className="press-scale flex h-10 w-10 items-center justify-center rounded-xl text-[14px] text-white"
           style={{ background: "var(--accent-purple)" }} onClick={handleSend} disabled={loading}>
           ↑
         </button>

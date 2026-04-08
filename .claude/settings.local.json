@@ -7,7 +7,8 @@
       "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\);const j=JSON.parse\\(d\\);if\\(j[0]\\) console.log\\('member fields:', Object.keys\\(j[0]\\).join\\(', '\\)\\)\")",
       "Bash(pnpm build:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m ':*)"
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)"
     ]
   }
 }

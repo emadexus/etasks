@@ -27,20 +27,20 @@ function TabBar({ tabs, active, onChange }: {
   onChange: (tab: SubTab) => void;
 }) {
   return (
-    <div className="mb-3 flex gap-5" style={{ borderBottom: "1px solid var(--border-separator)" }}>
+    <div className="mb-4 flex gap-6" style={{ borderBottom: "1px solid var(--border-separator)" }}>
       {tabs.map((tab) => (
         <button
           key={tab.key}
-          className="relative flex items-center gap-1.5 pb-2.5 text-[13px] font-semibold transition-colors"
-          style={{ color: active === tab.key ? "var(--accent-purple)" : "var(--text-muted)" }}
+          className="relative flex items-center gap-1.5 pb-3 text-[13px] font-semibold transition-colors"
+          style={{ color: active === tab.key ? "var(--accent-blue)" : "var(--text-muted)" }}
           onClick={() => onChange(tab.key)}
         >
           {tab.label}
           <span
             className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold"
             style={{
-              background: active === tab.key ? "var(--accent-purple)" : "rgba(255,255,255,0.08)",
-              color: active === tab.key ? "#fff" : "var(--text-muted)",
+              background: active === tab.key ? "var(--accent-blue)" : "rgba(255,255,255,0.06)",
+              color: active === tab.key ? "#fff" : "var(--text-dim)",
             }}
           >
             {tab.count}
@@ -48,7 +48,7 @@ function TabBar({ tabs, active, onChange }: {
           {active === tab.key && (
             <div
               className="absolute -bottom-px left-0 right-0 h-[2px] rounded-full"
-              style={{ background: "var(--accent-purple)" }}
+              style={{ background: "var(--accent-blue)" }}
             />
           )}
         </button>
@@ -180,7 +180,7 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
   ];
 
   return (
-    <div className="app-scroll-container mx-auto max-w-lg px-4 pb-8 pt-3">
+    <div className="app-scroll-container mx-auto max-w-lg px-5 pb-8 pt-4">
       <div className="mb-3 flex items-center gap-2">
         <button
           className="flex h-8 w-8 items-center justify-center rounded-lg text-[18px] transition-colors active:bg-white/5"
@@ -250,7 +250,7 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
         ))}
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div key={subTab + statusFilter + tagFilter} className="content-enter flex flex-col gap-1.5">
         {isLoading && sortedTasks.length === 0 && (
           <p className="py-12 text-center text-[13px]" style={{ color: "var(--text-muted)" }}>{t("loadingTasks")}</p>
         )}
@@ -265,18 +265,22 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
             </div>
           </div>
         )}
-        {sortedTasks.map((item: any) => (
-          <TaskCard
+        {sortedTasks.map((item: any, index: number) => (
+          <div
             key={item.task.id}
-            task={item.task}
-            assignee={item.assignee}
-            commentCount={item.commentCount || 0}
-            onTap={setSelectedTaskId}
-            onToggleStatus={(id, newStatus) => {
-              // Optimistic: update local item immediately, then sync in background
-              updateTask(id, { status: newStatus });
-            }}
-          />
+            className="stagger-item"
+            style={{ animationDelay: `${Math.min(index * 40, 400)}ms` }}
+          >
+            <TaskCard
+              task={item.task}
+              assignee={item.assignee}
+              commentCount={item.commentCount || 0}
+              onTap={setSelectedTaskId}
+              onToggleStatus={(id, newStatus) => {
+                updateTask(id, { status: newStatus });
+              }}
+            />
+          </div>
         ))}
       </div>
 

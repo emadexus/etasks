@@ -149,21 +149,21 @@ function SettingsSheet({ user, boards, onClose }: {
 
   return createPortal(
     <>
-      <div className="fixed inset-0 z-[100] bg-black/40" onClick={onClose} />
+      <div className="sheet-overlay-enter fixed inset-0 z-[100] bg-black/40" onClick={onClose} />
       <div
-        className="fixed inset-x-0 bottom-0 z-[101] max-h-[80vh] overflow-y-auto rounded-t-2xl px-4 pb-8 pt-3"
-        style={{ background: "var(--bg-secondary)" }}
+        className="sheet-enter glass-elevated fixed inset-x-0 bottom-0 z-[101] max-h-[80vh] overflow-y-auto rounded-t-2xl px-4 pb-8 pt-3"
+        style={{ background: "rgba(30, 26, 46, 0.85)" }}
       >
         <div className="mx-auto mb-4 h-1 w-8 rounded-full" style={{ background: "var(--text-dim)" }} />
 
         <div className="mb-1 text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-dim)" }}>
           {userLang === "ru" ? "Язык приложения" : "App language"}
         </div>
-        <div className="mb-4 overflow-hidden rounded-xl" style={{ background: "var(--bg-card)" }}>
+        <div className="card-elevated glass mb-4 overflow-hidden rounded-xl">
           {LANGUAGES.map((l, i) => (
             <button
               key={l.code}
-              className="flex w-full items-center gap-3 px-3.5 py-3 transition-colors active:bg-white/5"
+              className="flex w-full items-center gap-3 px-3.5 py-3 press-scale transition-colors"
               style={i > 0 ? { borderTop: "1px solid var(--border-separator)" } : undefined}
               onClick={() => handleUserLang(l.code)}
             >
@@ -314,25 +314,109 @@ export function HomeScreen() {
   const boardCount = boards?.length || 0;
 
   return (
-    <div className="app-scroll-container mx-auto max-w-lg px-4 pb-24 pt-6">
-      {/* ── User header ── */}
-      <button
-        className="mb-5 flex w-full items-center justify-between transition-colors active:opacity-70"
-        onClick={() => setShowSettings(true)}
+    <div className="app-scroll-container mx-auto max-w-lg pb-24">
+      {/* ── Gradient header zone ── */}
+      <div
+        className="px-5 pb-6 pt-8"
+        style={{
+          background: "linear-gradient(180deg, rgba(139,92,246,0.15) 0%, rgba(99,102,241,0.08) 50%, transparent 100%)",
+        }}
       >
-        <div className="flex items-center gap-2.5">
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold"
-            style={{ background: "var(--accent-purple)", color: "#fff" }}
+        <div className="mb-6 flex items-center justify-between">
+          <button
+            className="flex items-center gap-3.5 press-scale"
+            onClick={() => setShowSettings(true)}
           >
-            {(user?.firstName || "U")[0].toUpperCase()}
-          </div>
-          <span className="text-[15px] font-semibold">
-            {user?.firstName || t("user")}{" "}
-            <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>›</span>
-          </span>
+            {/* Avatar with progress ring */}
+            <div className="relative flex items-center justify-center" style={{ width: 48, height: 48 }}>
+              <svg width="48" height="48" viewBox="0 0 48 48" className="absolute inset-0">
+                <circle cx="24" cy="24" r="22" fill="none" stroke="rgba(139,92,246,0.12)" strokeWidth="2.5" />
+                <circle
+                  cx="24" cy="24" r="22"
+                  fill="none"
+                  stroke="var(--accent-green)"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  className="progress-ring-circle"
+                  strokeDasharray={`${2 * Math.PI * 22}`}
+                  strokeDashoffset={`${2 * Math.PI * 22 * (1 - Math.min((counts?.completed ?? 0) / Math.max((counts?.all ?? 0) + (counts?.completed ?? 0), 1), 1))}`}
+                />
+              </svg>
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-semibold"
+                style={{ background: "var(--accent-purple)", color: "#fff" }}
+              >
+                {(user?.firstName || "U")[0].toUpperCase()}
+              </div>
+            </div>
+            <div className="text-[18px] font-bold tracking-tight">
+              {(() => {
+                const h = new Date().getHours();
+                const greeting = h < 12 ? t("goodMorning") : h < 18 ? t("goodAfternoon") : t("goodEvening");
+                return `${greeting}, ${user?.firstName || "—"}`;
+              })()}
+            </div>
+          </button>
+          <button
+            className="press-scale flex h-9 w-9 items-center justify-center rounded-full text-[15px]"
+            style={{ color: "var(--text-dim)", background: "var(--surface-1)" }}
+            onClick={() => setShowSettings(true)}
+          >
+            ⚙
+          </button>
         </div>
-      </button>
+
+        {/* ── Widget cards — horizontal gradient cards ── */}
+        {counts && (
+          <div className="flex gap-3">
+            <button
+              className="flex flex-1 flex-col rounded-2xl px-4 py-3.5 press-scale"
+              style={{
+                background: "linear-gradient(135deg, rgba(52,211,153,0.18) 0%, rgba(52,211,153,0.06) 100%)",
+                border: "1px solid rgba(52,211,153,0.15)",
+              }}
+              onClick={() => setView({ type: "filter", filter: "today", label: t("today") })}
+            >
+              <span className="text-[28px] font-bold leading-none" style={{ color: "var(--accent-green)" }}>
+                {counts.today ?? 0}
+              </span>
+              <span className="mt-1 text-[12px] font-semibold" style={{ color: "rgba(52,211,153,0.8)" }}>
+                {t("today")}
+              </span>
+            </button>
+            <button
+              className="flex flex-1 flex-col rounded-2xl px-4 py-3.5 press-scale"
+              style={{
+                background: "linear-gradient(135deg, rgba(251,146,60,0.18) 0%, rgba(251,146,60,0.06) 100%)",
+                border: "1px solid rgba(251,146,60,0.15)",
+              }}
+              onClick={() => setView({ type: "filter", filter: "inbox", label: t("inbox") })}
+            >
+              <span className="text-[28px] font-bold leading-none" style={{ color: "var(--accent-orange)" }}>
+                {counts.inbox ?? 0}
+              </span>
+              <span className="mt-1 text-[12px] font-semibold" style={{ color: "rgba(251,146,60,0.8)" }}>
+                {t("inbox")}
+              </span>
+            </button>
+            <button
+              className="flex flex-1 flex-col rounded-2xl px-4 py-3.5 press-scale"
+              style={{
+                background: "linear-gradient(135deg, rgba(99,102,241,0.18) 0%, rgba(99,102,241,0.06) 100%)",
+                border: "1px solid rgba(99,102,241,0.15)",
+              }}
+              onClick={() => setView({ type: "filter", filter: "all", label: t("all") })}
+            >
+              <span className="text-[28px] font-bold leading-none" style={{ color: "var(--accent-blue)" }}>
+                {counts.all ?? 0}
+              </span>
+              <span className="mt-1 text-[12px] font-semibold" style={{ color: "rgba(99,102,241,0.8)" }}>
+                {t("all")}
+              </span>
+            </button>
+          </div>
+        )}
+      </div>
 
       {showSettings && (
         <SettingsSheet
@@ -342,123 +426,95 @@ export function HomeScreen() {
         />
       )}
 
-      {/* ── Widget cards ── */}
-      {counts && (
-        <div className="mb-4 flex gap-2.5">
-          <button
-            className="flex flex-1 flex-col rounded-xl px-3.5 py-3 transition-colors active:bg-white/5"
-            style={{ background: "rgba(52, 211, 153, 0.08)", border: "1px solid rgba(52, 211, 153, 0.15)" }}
-            onClick={() => setView({ type: "filter", filter: "today", label: t("today") })}
-          >
-            <span className="text-[22px] font-bold" style={{ color: "var(--accent-green)" }}>
-              {counts.today ?? 0}
-            </span>
-            <span className="text-[12px] font-medium" style={{ color: "var(--accent-green)" }}>
-              {t("today")}
-            </span>
-          </button>
-          <button
-            className="flex flex-1 flex-col rounded-xl px-3.5 py-3 transition-colors active:bg-white/5"
-            style={{ background: "rgba(251, 146, 60, 0.08)", border: "1px solid rgba(251, 146, 60, 0.15)" }}
-            onClick={() => setView({ type: "filter", filter: "inbox", label: t("inbox") })}
-          >
-            <span className="text-[22px] font-bold" style={{ color: "var(--accent-orange)" }}>
-              {counts.inbox ?? 0}
-            </span>
-            <span className="text-[12px] font-medium" style={{ color: "var(--accent-orange)" }}>
-              {t("inbox")}
-            </span>
-          </button>
-          {(counts.all - counts.today - counts.inbox) > 0 && (
-            <button
-              className="flex flex-1 flex-col rounded-xl px-3.5 py-3 transition-colors active:bg-white/5"
-              style={{ background: "rgba(99, 102, 241, 0.08)", border: "1px solid rgba(99, 102, 241, 0.15)" }}
-              onClick={() => setView({ type: "filter", filter: "all", label: t("all") })}
-            >
-              <span className="text-[22px] font-bold" style={{ color: "var(--accent-blue)" }}>
-                {counts.all ?? 0}
-              </span>
-              <span className="text-[12px] font-medium" style={{ color: "var(--accent-blue)" }}>
-                {t("all")}
-              </span>
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* ── Smart filters ── */}
-      <div className="mb-4 overflow-hidden rounded-xl" style={{ background: "var(--bg-card)" }}>
-        {smartFilters.map((f, i) => (
-          <button
-            key={f.key}
-            className="flex w-full items-center gap-3 px-3.5 py-2.5 transition-colors active:bg-white/5"
-            style={i > 0 ? { borderTop: "1px solid var(--border-separator)" } : undefined}
-            onClick={() => setView({ type: "filter", filter: f.key, label: t(f.labelKey) })}
-          >
-            <FilterIcon color={f.color} icon={f.icon} />
-            <span className="flex-1 text-left text-[14px] font-medium">{t(f.labelKey)}</span>
-            <span className="mr-1 text-[14px] tabular-nums" style={{ color: "var(--text-dim)" }}>
-              {counts?.[f.key as keyof typeof counts] ?? 0}
-            </span>
-            <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>›</span>
-          </button>
-        ))}
-      </div>
-
-      {/* ── Projects ── */}
-      {projectsList && projectsList.length > 0 && (
-        <div className="mb-4 overflow-hidden rounded-xl" style={{ background: "var(--bg-card)" }}>
-          {projectsList.map((p: any, i: number) => (
-            <button
-              key={p.id}
-              className="flex w-full items-center gap-3 px-3.5 py-2.5 transition-colors active:bg-white/5"
-              style={i > 0 ? { borderTop: "1px solid var(--border-separator)" } : undefined}
-              onClick={() => setView({ type: "project", projectId: p.id, label: p.name })}
-            >
-              <div
-                className="flex h-[30px] w-[30px] items-center justify-center rounded-full text-[13px] font-semibold"
-                style={{ background: p.color || "var(--accent-purple)", color: "#fff" }}
-              >
-                {p.name[0].toUpperCase()}
-              </div>
-              <span className="flex-1 text-left text-[14px] font-medium">{p.name}</span>
-              <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>›</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* ── Group Boards ── */}
-      {boards && (boards as any[]).length > 0 && (
-        <div className="mb-4 overflow-hidden rounded-xl" style={{ background: "var(--bg-card)" }}>
-          {(boards as any[]).map((b: any, i: number) => (
-            <button
-              key={b.id}
-              className="flex w-full items-center gap-3 px-3.5 py-2.5 transition-colors active:bg-white/5"
-              style={i > 0 ? { borderTop: "1px solid var(--border-separator)" } : undefined}
-              onClick={() => setView({ type: "board", chatId: b.chatId, label: b.name })}
-            >
-              {b.photoUrl ? (
-                <img
-                  src={b.photoUrl}
-                  alt=""
-                  className="h-[30px] w-[30px] rounded-full object-cover"
-                />
-              ) : (
-                <div
-                  className="flex h-[30px] w-[30px] items-center justify-center rounded-full text-[12px] font-semibold"
-                  style={{ background: "var(--accent-blue)", color: "#fff" }}
+      <div className="px-5">
+        {/* ── Smart filters — remaining filters ── */}
+        <div className="mb-6 overflow-hidden rounded-2xl" style={{ borderLeft: "2px solid var(--accent-purple)" }}>
+          <div className="card-elevated glass overflow-hidden rounded-2xl">
+            {smartFilters.filter(f => f.key !== "today" && f.key !== "inbox" && f.key !== "all").map((f, i) => {
+              const count = counts?.[f.key as keyof typeof counts] ?? 0;
+              return (
+                <button
+                  key={f.key}
+                  className="flex w-full items-center gap-4 px-4 py-3 press-scale"
+                  style={i > 0 ? { borderTop: "1px solid var(--border-separator)" } : undefined}
+                  onClick={() => setView({ type: "filter", filter: f.key, label: t(f.labelKey) })}
                 >
-                  {b.name[0].toUpperCase()}
-                </div>
-              )}
-              <span className="flex-1 text-left text-[14px] font-medium">{b.name}</span>
-              <span className="mr-1 text-[14px]" style={{ color: "var(--text-dim)" }}>⊞</span>
-              <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>›</span>
-            </button>
-          ))}
+                  <FilterIcon color={f.color} icon={f.icon} />
+                  <span className="flex-1 text-left text-[14px] font-medium">{t(f.labelKey)}</span>
+                  <span className="text-[14px] tabular-nums font-semibold" style={{ color: count > 0 ? f.color : "var(--text-dim)" }}>
+                    {count}
+                  </span>
+                  <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>›</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      )}
+
+        {/* ── Projects ── */}
+        {projectsList && projectsList.length > 0 && (
+          <div className="mb-6">
+            <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
+              {t("projects")}
+            </div>
+            <div style={{ borderLeft: "2px solid var(--accent-blue)" }}>
+              <div className="card-elevated glass overflow-hidden rounded-2xl">
+                {projectsList.map((p: any, i: number) => (
+                  <button
+                    key={p.id}
+                    className="flex w-full items-center gap-4 px-4 py-3.5 press-scale"
+                    style={i > 0 ? { borderTop: "1px solid var(--border-separator)" } : undefined}
+                    onClick={() => setView({ type: "project", projectId: p.id, label: p.name })}
+                  >
+                    <div
+                      className="flex h-[36px] w-[36px] items-center justify-center rounded-xl text-[14px] font-semibold"
+                      style={{ background: p.color || "var(--accent-blue)", color: "#fff" }}
+                    >
+                      {p.name[0].toUpperCase()}
+                    </div>
+                    <span className="flex-1 text-left text-[15px] font-medium">{p.name}</span>
+                    <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>›</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Group Boards ── */}
+        {boards && (boards as any[]).length > 0 && (
+          <div className="mb-6">
+            <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
+              {t("groupBoards")}
+            </div>
+            <div style={{ borderLeft: "2px solid var(--accent-green)" }}>
+              <div className="card-elevated glass overflow-hidden rounded-2xl">
+                {(boards as any[]).map((b: any, i: number) => (
+                  <button
+                    key={b.id}
+                    className="flex w-full items-center gap-4 px-4 py-3.5 press-scale"
+                    style={i > 0 ? { borderTop: "1px solid var(--border-separator)" } : undefined}
+                    onClick={() => setView({ type: "board", chatId: b.chatId, label: b.name })}
+                  >
+                    {b.photoUrl ? (
+                      <img src={b.photoUrl} alt="" className="h-[36px] w-[36px] rounded-xl object-cover" />
+                    ) : (
+                      <div
+                        className="flex h-[36px] w-[36px] items-center justify-center rounded-xl text-[13px] font-semibold"
+                        style={{ background: "var(--accent-green)", color: "#fff" }}
+                      >
+                        {b.name[0].toUpperCase()}
+                      </div>
+                    )}
+                    <span className="flex-1 text-left text-[15px] font-medium">{b.name}</span>
+                    <span className="text-[13px]" style={{ color: "var(--text-dim)" }}>›</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       <FabMenu onNewTask={() => setShowDraft(true)} />
 

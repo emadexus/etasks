@@ -112,8 +112,8 @@ export function CalendarPicker({ dateDue, datePlanned, recurrenceRule, onAccept,
   const RECURRENCE_OPTIONS = getRecurrenceOptions();
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/60">
-      <div className="w-full max-w-lg rounded-t-2xl" style={{ background: "var(--bg-primary)" }}>
+    <div className="sheet-overlay-enter fixed inset-0 z-[90] flex items-end justify-center bg-black/60">
+      <div className="sheet-enter glass-elevated w-full max-w-lg rounded-t-2xl" style={{ background: "rgba(19, 17, 28, 0.9)" }}>
         {/* Tabs */}
         <div className="flex" style={{ borderBottom: "1px solid var(--border-separator)" }}>
           {(["planned", "due"] as const).map((tab) => (

@@ -7,7 +7,7 @@ interface FabMenuProps {
 export function FabMenu({ onNewTask }: FabMenuProps) {
   return (
     <button
-      className="fixed bottom-5 right-5 z-[80] flex h-[44px] w-[44px] items-center justify-center rounded-full shadow-lg transition-all active:scale-95"
+      className="fab-glow press-scale fixed bottom-5 right-5 z-[80] flex h-[44px] w-[44px] items-center justify-center rounded-full"
       style={{ background: "var(--accent-purple)" }}
       onClick={onNewTask}
     >

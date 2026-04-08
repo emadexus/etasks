@@ -132,6 +132,15 @@ const translations = {
     overdueCount: "overdue",
     tasksCount: "tasks",
 
+    // Greetings
+    goodMorning: "Good morning",
+    goodAfternoon: "Good afternoon",
+    goodEvening: "Good evening",
+
+    // Progress
+    completedToday: "completed today",
+    dayStreak: "day streak",
+
     // Detail fields
     statusLabel: "Status",
     priorityLabel: "Priority",
@@ -270,6 +279,15 @@ const translations = {
     // Home widgets
     overdueCount: "просрочено",
     tasksCount: "задач",
+
+    // Greetings
+    goodMorning: "Доброе утро",
+    goodAfternoon: "Добрый день",
+    goodEvening: "Добрый вечер",
+
+    // Progress
+    completedToday: "выполнено сегодня",
+    dayStreak: "дней подряд",
 
     // Detail fields
     statusLabel: "Статус",

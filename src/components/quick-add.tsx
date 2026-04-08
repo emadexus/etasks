@@ -27,24 +27,28 @@ export function QuickAdd({ onAdd }: QuickAddProps) {
 
   return (
     <div
-      className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5"
-      style={{ background: "var(--bg-card)" }}
+      className="glass flex items-center gap-3 rounded-xl px-4 py-3"
+      style={{
+        border: "1px dashed rgba(139, 92, 246, 0.25)",
+      }}
     >
       <button
         onClick={handleSubmit}
         disabled={loading || !value.trim()}
-        className="flex h-[22px] w-[22px] items-center justify-center rounded-full text-[14px] font-bold transition-colors"
+        className="flex h-[24px] w-[24px] items-center justify-center rounded-full text-[14px] font-bold press-scale"
         style={{
-          color: value.trim() ? "#fff" : "var(--text-dim)",
-          background: value.trim() ? "var(--accent-green)" : "transparent",
-          border: value.trim() ? "none" : "1.5px solid var(--text-dim)",
+          color: value.trim() ? "#fff" : "var(--accent-purple)",
+          background: value.trim() ? "var(--accent-purple)" : "transparent",
+          border: value.trim() ? "none" : "2px solid var(--accent-purple)",
+          opacity: value.trim() ? 1 : 0.5,
         }}
       >
         +
       </button>
       <input
         ref={inputRef}
-        className="flex-1 bg-transparent text-[13px] outline-none placeholder:text-[var(--text-dim)]"
+        className="flex-1 bg-transparent text-[13px] outline-none"
+        style={{ color: "var(--text-primary)" }}
         placeholder={t("addTaskPlaceholder")}
         value={value}
         onChange={(e) => setValue(e.target.value)}

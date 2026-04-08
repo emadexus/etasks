@@ -241,10 +241,21 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
       if (!title.trim()) return; // no title = no task
       setSaving(true);
       try {
-        const result = await createTask({ title: title.trim(), chatId: chatId || undefined });
+        // Include any local field changes in the create call
+        const createData: any = { title: title.trim(), chatId: chatId || undefined };
+        if (localTask?.priority && localTask.priority !== "medium") createData.priority = localTask.priority;
+        if (localTask?.dateDue) createData.dateDue = localTask.dateDue;
+        if (localTask?.datePlanned) createData.datePlanned = localTask.datePlanned;
+        const result = await createTask(createData);
         if (result?.id) {
           setCreatedId(result.id);
           setLocalTask((prev: any) => prev ? { ...prev, id: result.id } : prev);
+          // Sync any other local changes that happened before creation
+          const diffs: Record<string, any> = {};
+          if (localTask?.status && localTask.status !== "todo") diffs.status = localTask.status;
+          if (Object.keys(diffs).length > 0) {
+            await updateTask(result.id, diffs);
+          }
         }
       } catch (e) {
         console.error("Failed to create task:", e);
@@ -256,8 +267,10 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
   }, [isDraft, createdId, title, chatId, createTask, activeId, taskData]);
 
   const handleUpdate = useCallback(async (field: string, value: any) => {
-    if (!activeId) return;
+    // Always update local state (works for drafts before creation)
     setLocalTask((prev: any) => prev ? { ...prev, [field]: value } : prev);
+    // Only send to API if task exists on server
+    if (!activeId) return;
     setSaving(true);
     try {
       await updateTask(activeId, { [field]: value });
@@ -299,10 +312,10 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/60" onClick={onClose} />
+      <div className="sheet-overlay-enter fixed inset-0 z-40 bg-black/60" onClick={onClose} />
       <div
-        className="fixed inset-x-0 bottom-0 z-50 flex max-h-[90vh] flex-col rounded-t-2xl"
-        style={{ background: "var(--bg-secondary)" }}
+        className="sheet-enter glass-elevated fixed inset-x-0 bottom-0 z-50 flex max-h-[90vh] flex-col rounded-t-2xl"
+        style={{ background: "rgba(30, 26, 46, 0.85)" }}
       >
         <div className="flex-shrink-0 px-4 pt-3 pb-1">
           <div className="flex items-center justify-between">
@@ -381,8 +394,11 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
             onBlur={() => description !== (task.description || "") && handleUpdate("description", description)}
           />
 
-          {/* Metadata — compact inline chips */}
-          <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          {/* ── Section: Details ── */}
+          <div className="mb-1 mt-1 px-1 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
+            {lang === "ru" ? "Детали" : "Details"}
+          </div>
+          <div className="mb-4 flex flex-wrap items-center gap-1.5">
             <CycleLabel value={task.status} map={statusMap} onCycle={(next) => handleUpdate("status", next)} />
             <CycleLabel value={task.priority} map={priorityMap} onCycle={(next) => handleUpdate("priority", next)} />
             {isBoard && (
@@ -396,15 +412,20 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
               currentBoardId={task.boardId}
               boards={homeData?.boards || []}
               onMove={async (newBoardId) => {
-                await moveTask(task.id, newBoardId);
-                mutateTask();
-                showToast(t("taskMoved"));
+                try {
+                  await moveTask(task.id, newBoardId);
+                  mutateTask();
+                  showToast(t("taskMoved"));
+                } catch (e) {
+                  console.error("Move failed:", e);
+                  showToast(lang === "ru" ? "Не удалось переместить" : "Move failed");
+                }
               }}
             />
           </div>
 
-          {/* Tags */}
-          <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          {/* ── Section: Tags ── */}
+          <div className="mb-4 flex flex-wrap items-center gap-1.5">
             {tags.map((tag, i) => (
               <span
                 key={i}
@@ -448,9 +469,9 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
             />
           </div>
 
-          {/* Checklist */}
+          {/* ── Section: Checklist ── */}
           {(checklist.length > 0 || activeId) && (
-            <div className="mb-3 overflow-hidden rounded-xl" style={{ background: "var(--bg-card)" }}>
+            <div className="mb-4 overflow-hidden rounded-xl" style={{ background: "var(--surface-1)" }}>
               {checklist.length > 0 && (
                 <div className="px-1 py-1 text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--text-dim)", paddingLeft: "14px", paddingTop: "8px" }}>
                   {lang === "ru" ? "Чек-лист" : "Checklist"} · {checklist.filter(c => c.done).length}/{checklist.length}
@@ -517,9 +538,13 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
             </div>
           )}
 
+          {/* ── Section: Schedule ── */}
+          <div className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-widest" style={{ color: "var(--text-dim)" }}>
+            {lang === "ru" ? "Расписание" : "Schedule"}
+          </div>
           <button
-            className="mb-3 w-full rounded-xl px-3 py-2.5 text-left transition-colors active:bg-white/5"
-            style={{ background: "var(--bg-card)" }}
+            className="mb-4 w-full rounded-xl px-3 py-3 text-left press-scale"
+            style={{ background: "var(--surface-1)" }}
             onClick={() => setShowCalendar(true)}
           >
             <div className="flex items-center gap-3">
