@@ -130,15 +130,20 @@ function SettingsSheet({ user, boards, onClose }: {
   const { updateBoardLanguage } = useBoardActions();
   const [userLang, setUserLang] = useState(user?.language || "en");
 
+  const [boardLangs, setBoardLangs] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    for (const b of boards) map[b.id] = b.language || "en";
+    return map;
+  });
+
   const handleUserLang = async (lang: string) => {
     setUserLang(lang);
     setLocale(lang);
     await updateLanguage(lang);
-    // Close sheet so the whole app re-renders with the new language
-    onClose();
   };
 
   const handleBoardLang = async (boardId: string, lang: string) => {
+    setBoardLangs(prev => ({ ...prev, [boardId]: lang }));
     await updateBoardLanguage(boardId, lang);
   };
 
@@ -188,8 +193,8 @@ function SettingsSheet({ user, boards, onClose }: {
                         key={l.code}
                         className="rounded-lg px-2.5 py-1 text-[12px] font-medium transition-colors"
                         style={{
-                          background: (b.language || "en") === l.code ? "var(--accent-blue)" : "var(--bg-secondary)",
-                          color: (b.language || "en") === l.code ? "#fff" : "var(--text-muted)",
+                          background: (boardLangs[b.id] || "en") === l.code ? "var(--accent-blue)" : "var(--bg-secondary)",
+                          color: (boardLangs[b.id] || "en") === l.code ? "#fff" : "var(--text-muted)",
                         }}
                         onClick={() => handleBoardLang(b.id, l.code)}
                       >
