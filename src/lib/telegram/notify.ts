@@ -46,8 +46,51 @@ export function botT(key: BotStringKey, lang: string = "en"): string {
   return botStrings[locale][key] || botStrings.en[key];
 }
 
+/**
+ * Notification webhook URL. When set, all notifications are POSTed here
+ * instead of being sent via the bot API directly.
+ *
+ * Payload: { type: "group"|"user", chatId: string, text: string, replyMarkup?: object }
+ *
+ * Default (unset): sends via bot.api.sendMessage() as before.
+ */
+const NOTIFICATION_WEBHOOK_URL = process.env.NOTIFICATION_WEBHOOK_URL || "";
+
+async function sendViaWebhook(payload: {
+  type: "group" | "user";
+  chatId: string;
+  text: string;
+  parseMode?: string;
+  replyMarkup?: ReplyMarkup;
+}): Promise<boolean> {
+  if (!NOTIFICATION_WEBHOOK_URL) return false;
+  try {
+    const res = await fetch(NOTIFICATION_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return res.ok;
+  } catch (e) {
+    console.error("Webhook delivery failed, falling back to bot API:", e);
+    return false;
+  }
+}
+
 export async function notifyGroup(chatId: bigint, text: string, replyMarkup?: ReplyMarkup) {
   try {
+    // Try webhook first if configured
+    if (NOTIFICATION_WEBHOOK_URL) {
+      const sent = await sendViaWebhook({
+        type: "group",
+        chatId: chatId.toString(),
+        text,
+        parseMode: "HTML",
+        replyMarkup,
+      });
+      if (sent) return;
+      // Fall through to bot API on webhook failure
+    }
     await bot.api.sendMessage(chatId.toString(), text, {
       parse_mode: "HTML",
       link_preview_options: { is_disabled: true },
@@ -60,6 +103,15 @@ export async function notifyGroup(chatId: bigint, text: string, replyMarkup?: Re
 
 export async function notifyUser(userId: bigint, text: string) {
   try {
+    if (NOTIFICATION_WEBHOOK_URL) {
+      const sent = await sendViaWebhook({
+        type: "user",
+        chatId: userId.toString(),
+        text,
+        parseMode: "HTML",
+      });
+      if (sent) return;
+    }
     await bot.api.sendMessage(userId.toString(), text, { parse_mode: "HTML" });
   } catch (e) {
     console.warn("Failed to DM user:", userId.toString(), e);
