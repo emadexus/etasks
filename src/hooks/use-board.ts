@@ -48,79 +48,27 @@ function useAuthMutate() {
   }, []); // stable reference
 }
 
-// Silently revalidate without clearing cache — no visual flash
+// Refetch all task lists and counts from server
 function revalidateTasks() {
   mutate(
     (key: unknown) => typeof key === "string" && (key.startsWith("/api/tasks") || key.startsWith("/api/user/tasks") || key.startsWith("/api/user/counts")),
-    undefined,
-    { revalidate: true, populateCache: false }
-  );
-}
-
-// Optimistically remove a task from all cached task lists
-function optimisticRemoveTask(taskId: string) {
-  mutate(
-    (key: unknown) => typeof key === "string" && (key.startsWith("/api/tasks") || key.startsWith("/api/user/tasks")),
-    (data: any) => {
-      if (!data) return data;
-      // Board tasks: { tasks: [...] }
-      if (data.tasks) return { ...data, tasks: data.tasks.filter((t: any) => t.task.id !== taskId) };
-      // User tasks: [...]
-      if (Array.isArray(data)) return data.filter((t: any) => t.task?.id !== taskId);
-      return data;
-    },
-    { revalidate: false }
-  );
-}
-
-// Optimistically update a task in all cached task lists
-function optimisticUpdateTask(taskId: string, updates: Record<string, any>) {
-  mutate(
-    (key: unknown) => typeof key === "string" && (key.startsWith("/api/tasks") || key.startsWith("/api/user/tasks")),
-    (data: any) => {
-      if (!data) return data;
-      const patchItem = (item: any) => {
-        if (item.task?.id !== taskId) return item;
-        return { ...item, task: { ...item.task, ...updates } };
-      };
-      if (data.tasks) return { ...data, tasks: data.tasks.map(patchItem) };
-      if (Array.isArray(data)) return data.map(patchItem);
-      return data;
-    },
-    { revalidate: false }
   );
 }
 
 function revalidateComments() {
-  mutate(
-    (key: unknown) => typeof key === "string" && key.startsWith("/api/comments"),
-    undefined,
-    { revalidate: true, populateCache: false }
-  );
+  mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/comments"));
 }
 
 function revalidateProjects() {
-  mutate(
-    (key: unknown) => typeof key === "string" && key.startsWith("/api/projects"),
-    undefined,
-    { revalidate: true, populateCache: false }
-  );
+  mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/projects"));
 }
 
 function revalidateHome() {
-  mutate(
-    (key: unknown) => typeof key === "string" && key.startsWith("/api/home"),
-    undefined,
-    { revalidate: true, populateCache: false }
-  );
+  mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/home"));
 }
 
 function revalidateAttachments() {
-  mutate(
-    (key: unknown) => typeof key === "string" && key.startsWith("/api/attachments"),
-    undefined,
-    { revalidate: true, populateCache: false }
-  );
+  mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/attachments"));
 }
 
 const swrOpts = {
@@ -183,17 +131,12 @@ export function useTaskActions(chatId: string | null) {
       return result;
     },
     updateTask: async (id: string, data: Record<string, any>) => {
-      // Optimistically update the list immediately
-      optimisticUpdateTask(id, data);
       const result = await api(`/api/tasks/${id}`, "PATCH", data);
       revalidateTasks();
       revalidateHome();
-      mutate(`/api/tasks/${id}`);
       return result;
     },
     deleteTask: async (id: string) => {
-      // Optimistically remove from list immediately
-      optimisticRemoveTask(id);
       await api(`/api/tasks/${id}`, "DELETE");
       revalidateTasks();
       revalidateHome();

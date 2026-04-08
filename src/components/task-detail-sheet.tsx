@@ -256,37 +256,33 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
 
   const handleUpdate = useCallback(async (field: string, value: any) => {
     if (!activeId) return;
+    // Update local state for instant card feedback
     setLocalTask((prev: any) => prev ? { ...prev, [field]: value } : prev);
     setSaving(true);
     setPendingUpdates(n => n + 1);
-
-    updateTask(activeId, { [field]: value })
-      .then(async () => {
-        await mutateTask((current: any) => {
-          if (!current) return current;
-          const updated: any = { ...current, task: { ...current.task, [field]: value } };
-          if (field === "assigneeId") {
-            updated.assignee = value
-              ? (membersData || []).find((m: any) => m.id === value) || current.assignee
-              : null;
-          }
-          return updated;
-        }, { revalidate: false });
-        setPendingUpdates(n => n - 1);
-      })
-      .catch((e) => { console.error(e); setPendingUpdates(n => n - 1); setSaving(false); });
-  }, [activeId, updateTask, mutateTask, membersData]);
+    try {
+      await updateTask(activeId, { [field]: value });
+      // Server confirmed — SWR refetch already triggered by updateTask
+    } catch (e) {
+      console.error(e);
+    }
+    setPendingUpdates(n => n - 1);
+    setSaving(false);
+  }, [activeId, updateTask]);
 
   const handleMultiUpdate = useCallback(async (updates: Record<string, any>) => {
     if (!activeId) return;
     setLocalTask((prev: any) => prev ? { ...prev, ...updates } : prev);
     setSaving(true);
     setPendingUpdates(n => n + 1);
-
-    updateTask(activeId, updates)
-      .then(async () => { await mutateTask((current: any) => current ? { ...current, task: { ...current.task, ...updates } } : current, { revalidate: false }); setPendingUpdates(n => n - 1); })
-      .catch((e) => { console.error(e); setPendingUpdates(n => n - 1); setSaving(false); });
-  }, [activeId, updateTask, mutateTask]);
+    try {
+      await updateTask(activeId, updates);
+    } catch (e) {
+      console.error(e);
+    }
+    setPendingUpdates(n => n - 1);
+    setSaving(false);
+  }, [activeId, updateTask]);
 
   // For drafts, show the empty card. For existing tasks, wait for data.
   if (!isDraft && !localTask) return null;
