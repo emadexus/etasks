@@ -57,6 +57,40 @@ function revalidateTasks() {
   );
 }
 
+// Optimistically remove a task from all cached task lists
+function optimisticRemoveTask(taskId: string) {
+  mutate(
+    (key: unknown) => typeof key === "string" && (key.startsWith("/api/tasks") || key.startsWith("/api/user/tasks")),
+    (data: any) => {
+      if (!data) return data;
+      // Board tasks: { tasks: [...] }
+      if (data.tasks) return { ...data, tasks: data.tasks.filter((t: any) => t.task.id !== taskId) };
+      // User tasks: [...]
+      if (Array.isArray(data)) return data.filter((t: any) => t.task?.id !== taskId);
+      return data;
+    },
+    { revalidate: false }
+  );
+}
+
+// Optimistically update a task in all cached task lists
+function optimisticUpdateTask(taskId: string, updates: Record<string, any>) {
+  mutate(
+    (key: unknown) => typeof key === "string" && (key.startsWith("/api/tasks") || key.startsWith("/api/user/tasks")),
+    (data: any) => {
+      if (!data) return data;
+      const patchItem = (item: any) => {
+        if (item.task?.id !== taskId) return item;
+        return { ...item, task: { ...item.task, ...updates } };
+      };
+      if (data.tasks) return { ...data, tasks: data.tasks.map(patchItem) };
+      if (Array.isArray(data)) return data.map(patchItem);
+      return data;
+    },
+    { revalidate: false }
+  );
+}
+
 function revalidateComments() {
   mutate(
     (key: unknown) => typeof key === "string" && key.startsWith("/api/comments"),
@@ -149,6 +183,8 @@ export function useTaskActions(chatId: string | null) {
       return result;
     },
     updateTask: async (id: string, data: Record<string, any>) => {
+      // Optimistically update the list immediately
+      optimisticUpdateTask(id, data);
       const result = await api(`/api/tasks/${id}`, "PATCH", data);
       revalidateTasks();
       revalidateHome();
@@ -156,6 +192,8 @@ export function useTaskActions(chatId: string | null) {
       return result;
     },
     deleteTask: async (id: string) => {
+      // Optimistically remove from list immediately
+      optimisticRemoveTask(id);
       await api(`/api/tasks/${id}`, "DELETE");
       revalidateTasks();
       revalidateHome();
