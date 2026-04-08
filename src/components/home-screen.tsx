@@ -134,6 +134,8 @@ function SettingsSheet({ user, boards, onClose }: {
     setUserLang(lang);
     setLocale(lang);
     await updateLanguage(lang);
+    // Close sheet so the whole app re-renders with the new language
+    onClose();
   };
 
   const handleBoardLang = async (boardId: string, lang: string) => {
