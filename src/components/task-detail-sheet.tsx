@@ -212,17 +212,18 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
     }
   }, [isDraft, createdId, chatId, homeData]);
 
+  const [initialized, setInitialized] = useState(isDraft);
   const [localReminders, setLocalReminders] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [pendingUpdates, setPendingUpdates] = useState(0);
   const [saving, setSaving] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [checklistInput, setChecklistInput] = useState("");
 
+  // Sync server → local only on initial load (once)
   useEffect(() => {
-    if (taskData?.task && pendingUpdates === 0) {
+    if (!initialized && taskData?.task) {
       setLocalTask(taskData.task);
       setTitle(taskData.task.title);
       setDescription(taskData.task.description || "");
@@ -230,9 +231,9 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
         .filter((r: any) => !r.sent)
         .map((r: any) => r.offsetLabel);
       setLocalReminders(offsets);
-      setSaving(false);
+      setInitialized(true);
     }
-  }, [taskData, pendingUpdates]);
+  }, [initialized, taskData]);
 
   // Draft: create task when title is entered
   const handleTitleBlur = useCallback(async () => {
@@ -256,17 +257,13 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
 
   const handleUpdate = useCallback(async (field: string, value: any) => {
     if (!activeId) return;
-    // Update local state for instant card feedback
     setLocalTask((prev: any) => prev ? { ...prev, [field]: value } : prev);
     setSaving(true);
-    setPendingUpdates(n => n + 1);
     try {
       await updateTask(activeId, { [field]: value });
-      // Server confirmed — SWR refetch already triggered by updateTask
     } catch (e) {
       console.error(e);
     }
-    setPendingUpdates(n => n - 1);
     setSaving(false);
   }, [activeId, updateTask]);
 
@@ -274,13 +271,11 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
     if (!activeId) return;
     setLocalTask((prev: any) => prev ? { ...prev, ...updates } : prev);
     setSaving(true);
-    setPendingUpdates(n => n + 1);
     try {
       await updateTask(activeId, updates);
     } catch (e) {
       console.error(e);
     }
-    setPendingUpdates(n => n - 1);
     setSaving(false);
   }, [activeId, updateTask]);
 
