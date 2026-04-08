@@ -18,6 +18,8 @@ jobs:
           script: |
             cd /opt/etasks
             git pull origin master
+            # Export NEXT_PUBLIC_* vars for docker compose build args
+            set -a && source .env.production && set +a
             docker compose build --no-cache
             docker compose up -d
             docker image prune -f
