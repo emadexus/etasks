@@ -667,7 +667,6 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
                 className="text-[11px] transition-colors active:opacity-70"
                 style={{ color: "var(--accent-red)" }}
                 onClick={async () => {
-                  if (!confirm(lang === "ru" ? "Удалить задачу навсегда?" : "Delete task permanently?")) return;
                   await deleteTask(task.id);
                   showToast(lang === "ru" ? "Задача удалена" : "Task deleted");
                   onClose();

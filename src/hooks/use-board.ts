@@ -151,13 +151,14 @@ export function useTaskActions(chatId: string | null) {
     updateTask: async (id: string, data: Record<string, any>) => {
       const result = await api(`/api/tasks/${id}`, "PATCH", data);
       revalidateTasks();
+      revalidateHome();
       mutate(`/api/tasks/${id}`);
-      if ("archivedAt" in data) revalidateHome();
       return result;
     },
     deleteTask: async (id: string) => {
       await api(`/api/tasks/${id}`, "DELETE");
       revalidateTasks();
+      revalidateHome();
     },
     addComment: async (taskId: string, text: string) => {
       const result = await api("/api/comments", "POST", { taskId, text });
