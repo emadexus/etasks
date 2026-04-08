@@ -48,27 +48,27 @@ function useAuthMutate() {
   }, []); // stable reference
 }
 
-// Refetch all task lists and counts from server
-function revalidateTasks() {
-  mutate(
+// Refetch and wait for fresh data from server
+async function revalidateTasks() {
+  await mutate(
     (key: unknown) => typeof key === "string" && (key.startsWith("/api/tasks") || key.startsWith("/api/user/tasks") || key.startsWith("/api/user/counts")),
   );
 }
 
-function revalidateComments() {
-  mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/comments"));
+async function revalidateComments() {
+  await mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/comments"));
 }
 
-function revalidateProjects() {
-  mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/projects"));
+async function revalidateProjects() {
+  await mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/projects"));
 }
 
-function revalidateHome() {
-  mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/home"));
+async function revalidateHome() {
+  await mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/home"));
 }
 
-function revalidateAttachments() {
-  mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/attachments"));
+async function revalidateAttachments() {
+  await mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/attachments"));
 }
 
 const swrOpts = {
@@ -133,25 +133,21 @@ export function useTaskActions(chatId: string | null) {
     },
     updateTask: async (id: string, data: Record<string, any>) => {
       const result = await api(`/api/tasks/${id}`, "PATCH", data);
-      revalidateTasks();
-      revalidateHome();
+      await Promise.all([revalidateTasks(), revalidateHome()]);
       return result;
     },
     deleteTask: async (id: string) => {
       await api(`/api/tasks/${id}`, "DELETE");
-      revalidateTasks();
-      revalidateHome();
+      await Promise.all([revalidateTasks(), revalidateHome()]);
     },
     addComment: async (taskId: string, text: string) => {
       const result = await api("/api/comments", "POST", { taskId, text });
-      revalidateComments();
+      await revalidateComments();
       return result;
     },
     moveTask: async (id: string, boardId: string | null) => {
       const result = await api(`/api/tasks/${id}`, "PATCH", { boardId });
-      revalidateTasks();
-      revalidateHome();
-      mutate(`/api/tasks/${id}`);
+      await Promise.all([revalidateTasks(), revalidateHome()]);
       return result;
     },
   }), [api, chatId]);

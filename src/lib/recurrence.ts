@@ -57,7 +57,6 @@ export async function createNextRecurrence(completedTask: typeof tasks.$inferSel
     createdBy: completedTask.createdBy,
     dateDue: nextDue,
     datePlanned: nextPlanned,
-    notifyAt: null,
     recurrenceRule: completedTask.recurrenceRule,
     completedAt: null,
   }).returning();

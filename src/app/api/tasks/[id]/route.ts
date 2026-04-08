@@ -57,7 +57,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.assigneeId !== undefined) updates.assigneeId = body.assigneeId;
   if (body.dateDue !== undefined) updates.dateDue = body.dateDue ? new Date(body.dateDue) : null;
   if (body.datePlanned !== undefined) updates.datePlanned = body.datePlanned ? new Date(body.datePlanned) : null;
-  if (body.notifyAt !== undefined) updates.notifyAt = body.notifyAt ? new Date(body.notifyAt) : null;
   if (body.recurrenceRule !== undefined) updates.recurrenceRule = body.recurrenceRule;
   if (body.projectId !== undefined) updates.projectId = body.projectId || null;
   if (body.tags !== undefined) updates.tags = body.tags ? JSON.stringify(body.tags) : null;

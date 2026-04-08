@@ -172,7 +172,6 @@ export async function POST(req: NextRequest) {
     status: taskStatus,
     dateDue,
     datePlanned,
-    notifyAt,
     recurrenceRule,
     projectId,
     // Admin-specific: create on behalf of a user
@@ -226,7 +225,6 @@ export async function POST(req: NextRequest) {
       createdBy: authorMember.id,
       dateDue: dueDate,
       datePlanned: datePlanned ? new Date(datePlanned) : null,
-      notifyAt: notifyAt ? new Date(notifyAt) : null,
       recurrenceRule: recurrenceRule || null,
       createdVia: createdVia || "admin_api",
     }).returning();
@@ -265,7 +263,6 @@ export async function POST(req: NextRequest) {
     createdBy: null,
     dateDue: dateDue ? new Date(dateDue) : null,
     datePlanned: datePlanned ? new Date(datePlanned) : null,
-    notifyAt: notifyAt ? new Date(notifyAt) : null,
     recurrenceRule: recurrenceRule || null,
     createdVia: createdVia || "admin_api",
   }).returning();

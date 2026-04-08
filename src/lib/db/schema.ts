@@ -54,6 +54,7 @@ export const tasks = pgTable("tasks", {
   createdBy: uuid("created_by").references(() => members.id),
   dateDue: timestamp("date_due"),
   datePlanned: timestamp("date_planned"),
+  /** @deprecated Kept for DB compat; no longer used in API or UI */
   notifyAt: timestamp("notify_at"),
   recurrenceRule: text("recurrence_rule"),
   tags: text("tags"),

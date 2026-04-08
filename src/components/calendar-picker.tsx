@@ -6,7 +6,6 @@ import { t } from "@/lib/i18n";
 interface CalendarPickerProps {
   dateDue: Date | null;
   datePlanned: Date | null;
-  notifyAt: Date | null;
   recurrenceRule: string | null;
   onAccept: (updates: Record<string, any>) => void;
   onCancel: () => void;
@@ -38,7 +37,7 @@ function getFirstDayOfWeek(year: number, month: number) {
   return day === 0 ? 6 : day - 1;
 }
 
-export function CalendarPicker({ dateDue, datePlanned, notifyAt, recurrenceRule, onAccept, onCancel }: CalendarPickerProps) {
+export function CalendarPicker({ dateDue, datePlanned, recurrenceRule, onAccept, onCancel }: CalendarPickerProps) {
   const [activeTab, setActiveTab] = useState<"planned" | "due">("due");
   const activeDate = activeTab === "due" ? dateDue : datePlanned;
 
@@ -52,11 +51,6 @@ export function CalendarPicker({ dateDue, datePlanned, notifyAt, recurrenceRule,
     const d = activeDate || null;
     if (!d) return "";
     return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
-  });
-  const [notify, setNotify] = useState(!!notifyAt);
-  const [notifyTime, setNotifyTime] = useState(() => {
-    if (!notifyAt) return "";
-    return `${notifyAt.getHours().toString().padStart(2, "0")}:${notifyAt.getMinutes().toString().padStart(2, "0")}`;
   });
   const [selectedRecurrence, setSelectedRecurrence] = useState(recurrenceRule || null);
   const [showRecurrencePicker, setShowRecurrencePicker] = useState(false);
@@ -99,16 +93,6 @@ export function CalendarPicker({ dateDue, datePlanned, notifyAt, recurrenceRule,
     updates.dateDue = applyTime(selectedDue, activeTab === "due" ? time : "");
     updates.datePlanned = applyTime(selectedPlanned, activeTab === "planned" ? time : "");
     updates.recurrenceRule = selectedRecurrence;
-
-    if (notify && notifyTime && (selectedDue || selectedPlanned)) {
-      const baseDate = selectedDue || selectedPlanned!;
-      const notifyDate = new Date(baseDate);
-      const [h, m] = notifyTime.split(":").map(Number);
-      notifyDate.setHours(h, m, 0, 0);
-      updates.notifyAt = notifyDate.toISOString();
-    } else {
-      updates.notifyAt = null;
-    }
 
     onAccept(updates);
   };
@@ -216,27 +200,6 @@ export function CalendarPicker({ dateDue, datePlanned, notifyAt, recurrenceRule,
             </div>
             <input type="time" className="rounded bg-transparent px-2 py-0.5 text-[14px] outline-none"
               style={{ color: "var(--text-primary)", colorScheme: "dark" }} value={time} onChange={(e) => setTime(e.target.value)} />
-          </div>
-
-          <div style={{ borderTop: "1px solid var(--border-separator)" }} />
-
-          <div className="flex items-center justify-between px-3.5 py-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-[15px]" style={{ color: "var(--text-muted)" }}>⏰</span>
-              <span className="text-[14px]">{t("notify")}</span>
-            </div>
-            {notify ? (
-              <div className="flex items-center gap-2">
-                <input type="time" className="rounded bg-transparent px-2 py-0.5 text-[14px] outline-none"
-                  style={{ color: "var(--text-primary)", colorScheme: "dark" }} value={notifyTime} onChange={(e) => setNotifyTime(e.target.value)} />
-                <button className="text-[12px]" style={{ color: "var(--text-dim)" }}
-                  onClick={() => { setNotify(false); setNotifyTime(""); }}>✕</button>
-              </div>
-            ) : (
-              <button className="text-[13px]" style={{ color: "var(--text-muted)" }} onClick={() => setNotify(true)}>
-                {t("setSpecificTime")}
-              </button>
-            )}
           </div>
 
           <div style={{ borderTop: "1px solid var(--border-separator)" }} />

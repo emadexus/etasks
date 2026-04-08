@@ -542,13 +542,6 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
               </div>
             </div>
 
-            {task.notifyAt && (
-              <div className="mt-2 flex items-center gap-1.5 text-[11px]" style={{ color: "var(--accent-yellow)" }}>
-                <span>🔔</span>
-                <span>{formatDate(new Date(task.notifyAt), lang)}</span>
-              </div>
-            )}
-
             {task.recurrenceRule && (
               <div className="mt-2 flex items-center gap-1.5 text-[11px]" style={{ color: "var(--accent-purple)" }}>
                 <span>↻</span>
@@ -681,7 +674,6 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
         <CalendarPicker
           dateDue={dateDue}
           datePlanned={datePlanned}
-          notifyAt={task.notifyAt ? new Date(task.notifyAt) : null}
           recurrenceRule={task.recurrenceRule}
           onAccept={(updates) => { handleMultiUpdate(updates); setShowCalendar(false); }}
           onCancel={() => setShowCalendar(false)}

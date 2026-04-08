@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { chatId, title, description, priority, assigneeId, dateDue, datePlanned, projectId, notifyAt, recurrenceRule } = body;
+  const { chatId, title, description, priority, assigneeId, dateDue, datePlanned, projectId, recurrenceRule } = body;
 
   if (!title) {
     return NextResponse.json({ error: "title required" }, { status: 400 });
@@ -97,7 +97,6 @@ export async function POST(req: NextRequest) {
       createdBy: member.id,
       dateDue: dueDate,
       datePlanned: datePlanned ? new Date(datePlanned) : null,
-      notifyAt: notifyAt ? new Date(notifyAt) : null,
       recurrenceRule: recurrenceRule || null,
     }).returning();
 
@@ -132,7 +131,6 @@ export async function POST(req: NextRequest) {
     createdBy: null,
     dateDue: dateDue ? new Date(dateDue) : null,
     datePlanned: datePlanned ? new Date(datePlanned) : null,
-    notifyAt: notifyAt ? new Date(notifyAt) : null,
     recurrenceRule: recurrenceRule || null,
   }).returning();
 
