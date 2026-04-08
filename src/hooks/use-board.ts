@@ -73,7 +73,7 @@ function revalidateAttachments() {
 
 const swrOpts = {
   revalidateOnFocus: true,
-  refreshInterval: 5000,
+  refreshInterval: 30000,
   shouldRetryOnError: true,
   errorRetryCount: 3,
   errorRetryInterval: 1000,
