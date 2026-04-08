@@ -1,6 +1,6 @@
 "use client";
 
-import useSWR, { mutate } from "swr";
+import useSWR from "swr";
 import { useTelegram } from "@/components/telegram-provider";
 import { useCallback, useMemo, useRef, useEffect } from "react";
 
@@ -48,32 +48,9 @@ function useAuthMutate() {
   }, []); // stable reference
 }
 
-// Refetch and wait for fresh data from server
-async function revalidateTasks() {
-  await mutate(
-    (key: unknown) => typeof key === "string" && (key.startsWith("/api/tasks") || key.startsWith("/api/user/tasks") || key.startsWith("/api/user/counts")),
-  );
-}
-
-async function revalidateComments() {
-  await mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/comments"));
-}
-
-async function revalidateProjects() {
-  await mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/projects"));
-}
-
-async function revalidateHome() {
-  await mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/home"));
-}
-
-async function revalidateAttachments() {
-  await mutate((key: unknown) => typeof key === "string" && key.startsWith("/api/attachments"));
-}
-
 const swrOpts = {
   revalidateOnFocus: true,
-  refreshInterval: 30000,
+  refreshInterval: 5000,
   shouldRetryOnError: true,
   errorRetryCount: 3,
   errorRetryInterval: 1000,
@@ -126,28 +103,23 @@ export function useTaskActions(chatId: string | null) {
   const api = useAuthMutate();
 
   return useMemo(() => ({
-    createTask: async (data: { title: string; description?: string; priority?: string; assigneeId?: string; dateDue?: string; chatId?: string; projectId?: string; datePlanned?: string; notifyAt?: string; recurrenceRule?: string }) => {
+    createTask: async (data: { title: string; description?: string; priority?: string; assigneeId?: string; dateDue?: string; chatId?: string; projectId?: string; datePlanned?: string; recurrenceRule?: string }) => {
       const result = await api("/api/tasks", "POST", { ...data, chatId: data.chatId || chatId });
-      revalidateTasks();
       return result;
     },
     updateTask: async (id: string, data: Record<string, any>) => {
       const result = await api(`/api/tasks/${id}`, "PATCH", data);
-      await Promise.all([revalidateTasks(), revalidateHome()]);
       return result;
     },
     deleteTask: async (id: string) => {
       await api(`/api/tasks/${id}`, "DELETE");
-      await Promise.all([revalidateTasks(), revalidateHome()]);
     },
     addComment: async (taskId: string, text: string) => {
       const result = await api("/api/comments", "POST", { taskId, text });
-      await revalidateComments();
       return result;
     },
     moveTask: async (id: string, boardId: string | null) => {
       const result = await api(`/api/tasks/${id}`, "PATCH", { boardId });
-      await Promise.all([revalidateTasks(), revalidateHome()]);
       return result;
     },
   }), [api, chatId]);
@@ -199,7 +171,6 @@ export function useUserActions() {
   return useMemo(() => ({
     updateLanguage: async (language: string) => {
       const result = await api("/api/user", "PATCH", { language });
-      revalidateHome();
       return result;
     },
   }), [api]);
@@ -211,7 +182,6 @@ export function useBoardActions() {
   return useMemo(() => ({
     updateBoardLanguage: async (boardId: string, language: string) => {
       const result = await api("/api/boards", "PATCH", { boardId, language });
-      revalidateHome();
       return result;
     },
   }), [api]);
@@ -223,17 +193,14 @@ export function useProjectActions() {
   return useMemo(() => ({
     createProject: async (data: { name: string; color?: string; icon?: string }) => {
       const result = await api("/api/projects", "POST", data);
-      revalidateProjects();
       return result;
     },
     updateProject: async (id: string, data: object) => {
       const result = await api(`/api/projects/${id}`, "PATCH", data);
-      revalidateProjects();
       return result;
     },
     deleteProject: async (id: string) => {
       await api(`/api/projects/${id}`, "DELETE");
-      revalidateProjects();
     },
   }), [api]);
 }
@@ -263,7 +230,6 @@ export function useAttachmentActions() {
         body: formData,
       });
       if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-      revalidateAttachments();
       return res.json();
     },
   }), []);

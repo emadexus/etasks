@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useTelegram } from "@/components/telegram-provider";
-import { mutate } from "swr";
 import { useFilteredTasks, useTasks, useMembers, useTaskActions, useUser } from "@/hooks/use-board";
 import { TaskCard } from "./task-card";
 import { QuickAdd } from "./quick-add";
@@ -285,11 +284,7 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
         <TaskDetailSheet
           taskId={selectedTaskId}
           chatId={chatId}
-          onClose={() => {
-            setSelectedTaskId(null);
-            // Refetch list with latest server data
-            mutate((key: unknown) => typeof key === "string" && (key.startsWith("/api/tasks") || key.startsWith("/api/user/tasks") || key.startsWith("/api/home")));
-          }}
+          onClose={() => setSelectedTaskId(null)}
         />
       )}
 
@@ -300,10 +295,7 @@ export function TaskListView({ context, openTaskId, onBack }: TaskListViewProps)
           taskId={null}
           chatId={chatId}
           boardId={boardTasksData?.board?.id || null}
-          onClose={() => {
-            setShowDraft(false);
-            mutate((key: unknown) => typeof key === "string" && (key.startsWith("/api/tasks") || key.startsWith("/api/user/tasks") || key.startsWith("/api/home")));
-          }}
+          onClose={() => setShowDraft(false)}
         />
       )}
     </div>
