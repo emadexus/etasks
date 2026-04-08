@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { mutate } from "swr";
 import { useTelegram } from "@/components/telegram-provider";
 import { useHome, useTaskDetail, useUserActions, useBoardActions } from "@/hooks/use-board";
 import { TaskDetailSheet } from "./task-detail-sheet";
@@ -466,7 +467,10 @@ export function HomeScreen() {
         <TaskDetailSheet
           taskId={null}
           chatId={null}
-          onClose={() => setShowDraft(false)}
+          onClose={() => {
+            setShowDraft(false);
+            mutate((key: unknown) => typeof key === "string" && (key.startsWith("/api/tasks") || key.startsWith("/api/user/tasks") || key.startsWith("/api/home")));
+          }}
         />
       )}
     </div>
