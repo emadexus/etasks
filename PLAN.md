@@ -24,8 +24,8 @@ The Mini App runs inside @oooih_bot. This plan fixes frontend UX bugs.
 **File:** `src/components/task-detail-sheet.tsx`
 **Problem:** Long task descriptions are cut off in the card view.
 **Fix:**
-- [ ] Ensure description textarea auto-expands or has max-height with scroll
-- [ ] Add test for description overflow behavior
+- [x] Ensure description textarea auto-expands or has max-height with scroll
+- [x] Add test for description overflow behavior
 
 ## Task 4: Board avatars in board picker
 **File:** `src/components/task-detail-sheet.tsx`, function `BoardPicker`

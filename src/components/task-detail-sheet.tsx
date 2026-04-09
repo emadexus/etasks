@@ -410,13 +410,13 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
 
           <textarea
             className="mb-3 w-full resize-none bg-transparent text-[13px] outline-none"
-            style={{ color: "var(--text-secondary)", minHeight: "2.5em" }}
+            style={{ color: "var(--text-secondary)", minHeight: "2.5em", maxHeight: "40vh", overflowY: "auto" }}
             placeholder={t("addDescription")}
             rows={1}
             value={description}
             onChange={(e) => {
               setDescription(e.target.value);
-              // Auto-expand
+              // Auto-expand up to max-height, then scroll
               const el = e.target;
               el.style.height = "auto";
               el.style.height = el.scrollHeight + "px";
