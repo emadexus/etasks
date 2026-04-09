@@ -105,7 +105,7 @@ function AssigneePicker({ assignee, members, onChange }: {
 
 function BoardPicker({ currentBoardId, boards, onMove }: {
   currentBoardId: string | null;
-  boards: { id: string; name: string; chatId: string }[];
+  boards: { id: string; name: string; chatId: string; photoUrl?: string | null }[];
   onMove: (boardId: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -152,9 +152,13 @@ function BoardPicker({ currentBoardId, boards, onMove }: {
                   style={{ color: "var(--text-primary)" }}
                   onClick={(e) => { e.stopPropagation(); onMove(b.id); setOpen(false); }}
                 >
-                  <span className="flex h-6 w-6 items-center justify-center rounded text-[11px] font-semibold" style={{ background: "var(--accent-blue)", color: "#fff" }}>
-                    {b.name[0].toUpperCase()}
-                  </span>
+                  {b.photoUrl ? (
+                    <img src={b.photoUrl} alt="" className="h-6 w-6 rounded object-cover" />
+                  ) : (
+                    <span className="flex h-6 w-6 items-center justify-center rounded text-[11px] font-semibold" style={{ background: "var(--accent-blue)", color: "#fff" }}>
+                      {b.name[0].toUpperCase()}
+                    </span>
+                  )}
                   {b.name}
                 </button>
               ))}
@@ -217,14 +221,21 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  // Track local assignee for optimistic display (server assignee comes from taskData)
+  const [localAssignee, setLocalAssignee] = useState<any>(null);
+  const [localAssigneeSet, setLocalAssigneeSet] = useState(false);
+  // Skip poll after mutation to prevent blink (defer revalidation)
+  const [mutatedAt, setMutatedAt] = useState(0);
   const [showCalendar, setShowCalendar] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [checklistInput, setChecklistInput] = useState("");
 
-  // Sync server → local only on initial load (once)
+  // Sync server → local on initial load, and on poll ONLY if no recent mutation
   useEffect(() => {
     if (!initialized && taskData?.task) {
       setLocalTask(taskData.task);
+      setLocalAssignee(taskData.assignee);
+      setLocalAssigneeSet(true);
       setTitle(taskData.task.title);
       setDescription(taskData.task.description || "");
       const offsets = (taskData.reminders || [])
@@ -232,8 +243,16 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
         .map((r: any) => r.offsetLabel);
       setLocalReminders(offsets);
       setInitialized(true);
+    } else if (initialized && taskData?.task) {
+      // Re-sync from server poll, but only if no mutation in last 5s
+      const elapsed = Date.now() - mutatedAt;
+      if (elapsed > 5000) {
+        setLocalTask(taskData.task);
+        setLocalAssignee(taskData.assignee);
+        setLocalAssigneeSet(true);
+      }
     }
-  }, [initialized, taskData]);
+  }, [initialized, taskData, mutatedAt]);
 
   // Draft: create task when title is entered
   const handleTitleBlur = useCallback(async () => {
@@ -269,6 +288,13 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
   const handleUpdate = useCallback(async (field: string, value: any) => {
     // Always update local state (works for drafts before creation)
     setLocalTask((prev: any) => prev ? { ...prev, [field]: value } : prev);
+    setMutatedAt(Date.now()); // Defer poll sync to prevent blink
+    // Optimistic assignee update
+    if (field === "assigneeId" && membersData) {
+      const member = membersData.find((m: any) => m.id === value);
+      setLocalAssignee(member || null);
+      setLocalAssigneeSet(true);
+    }
     // Only send to API if task exists on server
     if (!activeId) return;
     setSaving(true);
@@ -278,7 +304,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
       console.error(e);
     }
     setSaving(false);
-  }, [activeId, updateTask]);
+  }, [activeId, updateTask, membersData]);
 
   const handleMultiUpdate = useCallback(async (updates: Record<string, any>) => {
     if (!activeId) return;
@@ -297,7 +323,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
   if (!localTask) return null;
 
   const task = localTask;
-  const assignee = taskData?.assignee;
+  const assignee = localAssigneeSet ? localAssignee : taskData?.assignee;
   const tags: string[] = task.tags ? (typeof task.tags === "string" ? JSON.parse(task.tags) : task.tags) : [];
   const checklist: { text: string; done: boolean }[] = task.checklist
     ? (typeof task.checklist === "string" ? JSON.parse(task.checklist) : task.checklist)
@@ -413,8 +439,9 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
               boards={homeData?.boards || []}
               onMove={async (newBoardId) => {
                 try {
+                  setLocalTask((prev: any) => prev ? { ...prev, boardId: newBoardId } : prev);
+                  setMutatedAt(Date.now());
                   await moveTask(task.id, newBoardId);
-                  mutateTask();
                   showToast(t("taskMoved"));
                 } catch (e) {
                   console.error("Move failed:", e);

@@ -227,7 +227,7 @@ function SettingsSheet({ user, boards, onClose }: {
 }
 
 export function HomeScreen() {
-  const { ready, openTaskId, startBoardChatId } = useTelegram();
+  const { ready, openTaskId, startBoardChatId, userId: tgUserId } = useTelegram();
   const { data: home, error: homeError } = useHome();
   const { data: deepLinkTask } = useTaskDetail(openTaskId);
 
@@ -443,7 +443,9 @@ export function HomeScreen() {
         {/* ── Smart filters — remaining filters ── */}
         <div className="mb-6 overflow-hidden rounded-2xl" style={{ borderLeft: "2px solid var(--accent-purple)" }}>
           <div className="card-elevated glass overflow-hidden rounded-2xl">
-            {smartFilters.filter(f => f.key !== "today" && f.key !== "inbox" && f.key !== "all").map((f, i) => {
+            {smartFilters.filter(f => f.key !== "today" && f.key !== "inbox" && f.key !== "all")
+            .filter(f => f.key !== "ooih" || tgUserId === "247463948")
+            .map((f, i) => {
               const count = counts?.[f.key as keyof typeof counts] ?? 0;
               return (
                 <button

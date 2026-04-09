@@ -55,13 +55,20 @@ export async function GET(req: NextRequest) {
     .where(and(...conditions))
     .orderBy(orderBy);
 
-  const serialized = result.map((r) => ({
-    ...r,
-    assignee: r.assignee?.id ? {
-      ...r.assignee,
-      telegramUserId: r.assignee.telegramUserId.toString(),
-    } : null,
-  }));
+  // Filter out bot tasks for non-admin users
+  const BOT_TG_ID = BigInt("8433233305");
+  const ADMIN_TG_ID = BigInt("247463948");
+  const isAdmin = auth.userId === ADMIN_TG_ID;
+
+  const serialized = result
+    .filter((r) => isAdmin || r.assignee?.telegramUserId !== BOT_TG_ID)
+    .map((r) => ({
+      ...r,
+      assignee: r.assignee?.id ? {
+        ...r.assignee,
+        telegramUserId: r.assignee.telegramUserId.toString(),
+      } : null,
+    }));
 
   return NextResponse.json({ tasks: serialized, board: { id: board.id, name: board.name } });
 }
