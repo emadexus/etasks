@@ -182,6 +182,8 @@ export async function POST(req: NextRequest) {
     createdVia,
     notify: shouldNotify,
     reminderOffsets,
+    tags,
+    checklist,
   } = body;
 
   if (!title) {
@@ -226,6 +228,8 @@ export async function POST(req: NextRequest) {
       dateDue: dueDate,
       datePlanned: datePlanned ? new Date(datePlanned) : null,
       recurrenceRule: recurrenceRule || null,
+      tags: tags ? JSON.stringify(tags) : null,
+      checklist: checklist ? JSON.stringify(checklist) : null,
       createdVia: createdVia || "admin_api",
     }).returning();
 
@@ -264,6 +268,8 @@ export async function POST(req: NextRequest) {
     dateDue: dateDue ? new Date(dateDue) : null,
     datePlanned: datePlanned ? new Date(datePlanned) : null,
     recurrenceRule: recurrenceRule || null,
+    tags: tags ? JSON.stringify(tags) : null,
+    checklist: checklist ? JSON.stringify(checklist) : null,
     createdVia: createdVia || "admin_api",
   }).returning();
 
