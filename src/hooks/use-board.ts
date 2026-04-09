@@ -70,6 +70,58 @@ export function useMembers(chatId: string | null) {
   return useSWR(key, fetcher, swrOpts);
 }
 
+/**
+ * Aggregate members from all boards the user belongs to.
+ * Used as a fallback for personal inbox tasks (boardId=null) where
+ * there's no single chatId to fetch members from.
+ * Deduplicates by telegramUserId, keeping the first occurrence.
+ */
+export function useAllMembers(boards: { id: string; chatId: string }[] | undefined) {
+  const fetcher = useAuthFetcher();
+  const authReady = useAuthReady();
+
+  // Build stable SWR keys for each board's members
+  const chatIds = useMemo(
+    () => (boards || []).map((b) => b.chatId).sort(),
+    [boards],
+  );
+
+  // Fetch members for each board in parallel using SWR's multi-key pattern
+  const keys = useMemo(
+    () => (authReady ? chatIds.map((cid) => `/api/members?chatId=${cid}`) : []),
+    [authReady, chatIds],
+  );
+
+  // Use a single SWR call with a composite key that fetches all and deduplicates
+  const compositeKey = useMemo(
+    () => (keys.length > 0 ? `__allMembers__:${keys.join(",")}` : null),
+    [keys],
+  );
+
+  const compositeFetcher = useCallback(
+    async () => {
+      const results = await Promise.all(keys.map((k) => fetcher(k)));
+      // Flatten and deduplicate by telegramUserId
+      const seen = new Set<string>();
+      const deduped: any[] = [];
+      for (const memberList of results) {
+        if (!Array.isArray(memberList)) continue;
+        for (const m of memberList) {
+          const tuid = m.telegramUserId?.toString();
+          if (tuid && !seen.has(tuid)) {
+            seen.add(tuid);
+            deduped.push(m);
+          }
+        }
+      }
+      return deduped;
+    },
+    [keys, fetcher],
+  );
+
+  return useSWR(compositeKey, compositeFetcher, swrOpts);
+}
+
 export function useTasks(chatId: string | null, filters?: Record<string, string>) {
   const fetcher = useAuthFetcher();
   const authReady = useAuthReady();

@@ -16,9 +16,9 @@ The Mini App runs inside @oooih_bot. This plan fixes frontend UX bugs.
 **File:** `src/components/task-detail-sheet.tsx`
 **Problem:** When a task is in personal inbox (boardId=null), the AssigneePicker has no members to show because `useMembers(resolvedChatId)` returns nothing (no chatId → no members).
 **Fix:**
-- [ ] For personal tasks (boardId=null), aggregate members from all boards or provide fallback
-- [ ] Create useAllMembers() hook or pass fallback members list to AssigneePicker
-- [ ] Add test for personal inbox assignee picker
+- [x] For personal tasks (boardId=null), aggregate members from all boards or provide fallback
+- [x] Create useAllMembers() hook or pass fallback members list to AssigneePicker
+- [x] Add test for personal inbox assignee picker
 
 ## Task 3: Task description scrollable
 **File:** `src/components/task-detail-sheet.tsx`

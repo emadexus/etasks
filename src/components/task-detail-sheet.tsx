@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { useTaskDetail, useComments, useTaskActions, useMembers, useAttachments, useAttachmentActions, useHome } from "@/hooks/use-board";
+import { useTaskDetail, useComments, useTaskActions, useMembers, useAllMembers, useAttachments, useAttachmentActions, useHome } from "@/hooks/use-board";
 import { useTelegram } from "./telegram-provider";
 import { CommentThread } from "./comment-thread";
 import { ReminderChips } from "./reminder-chips";
@@ -197,6 +197,11 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
     : chatId;
 
   const { data: membersData } = useMembers(resolvedChatId);
+  const { data: allMembersData } = useAllMembers(
+    !resolvedChatId ? (homeData?.boards as { id: string; chatId: string }[]) : undefined,
+  );
+  // For personal inbox tasks (no chatId), fall back to aggregated members from all boards
+  const effectiveMembers = membersData || allMembersData || [];
   const { updateTask, addComment, moveTask, deleteTask, createTask } = useTaskActions(resolvedChatId);
   const { data: attachmentsData, mutate: mutateAttachments } = useAttachments(activeId);
   const { uploadFile } = useAttachmentActions();
@@ -290,8 +295,8 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
     setLocalTask((prev: any) => prev ? { ...prev, [field]: value } : prev);
     setMutatedAt(Date.now()); // Defer poll sync to prevent blink
     // Optimistic assignee update
-    if (field === "assigneeId" && membersData) {
-      const member = membersData.find((m: any) => m.id === value);
+    if (field === "assigneeId" && effectiveMembers.length > 0) {
+      const member = effectiveMembers.find((m: any) => m.id === value);
       setLocalAssignee(member || null);
       setLocalAssigneeSet(true);
     }
@@ -304,7 +309,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
       console.error(e);
     }
     setSaving(false);
-  }, [activeId, updateTask, membersData]);
+  }, [activeId, updateTask, effectiveMembers]);
 
   const handleMultiUpdate = useCallback(async (updates: Record<string, any>) => {
     if (!activeId) return;
@@ -427,13 +432,11 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
           <div className="mb-4 flex flex-wrap items-center gap-1.5">
             <CycleLabel value={task.status} map={statusMap} onCycle={(next) => handleUpdate("status", next)} />
             <CycleLabel value={task.priority} map={priorityMap} onCycle={(next) => handleUpdate("priority", next)} />
-            {isBoard && (
-              <AssigneePicker
-                assignee={assignee}
-                members={membersData || []}
-                onChange={(id) => handleUpdate("assigneeId", id)}
-              />
-            )}
+            <AssigneePicker
+              assignee={assignee}
+              members={effectiveMembers}
+              onChange={(id) => handleUpdate("assigneeId", id)}
+            />
             <BoardPicker
               currentBoardId={task.boardId}
               boards={homeData?.boards || []}
