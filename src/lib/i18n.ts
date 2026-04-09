@@ -19,6 +19,7 @@ const translations = {
     next7days: "Next 7 Days",
     completed: "Completed",
     archived: "Archived",
+    ooih: "Ooih Bot",
 
     // Sub-tabs
     author: "Author",
@@ -167,6 +168,7 @@ const translations = {
     next7days: "Следующие 7 дней",
     completed: "Завершённые",
     archived: "Архив",
+    ooih: "Ooih Бот",
 
     // Sub-tabs
     author: "Автор",
