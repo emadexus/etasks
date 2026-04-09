@@ -66,8 +66,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // Move task to a different board (or to personal inbox with boardId=null)
   if (body.boardId !== undefined) {
     if (body.boardId === null) {
+      // Moving to personal inbox — keep assignee, clear board-specific fields
       updates.boardId = null;
-      updates.assigneeId = null;
       updates.createdBy = null;
     } else if (body.boardId !== task.boardId) {
       // Verify user is a member of the destination board
@@ -76,9 +76,41 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         return NextResponse.json({ error: "Not a member of destination board" }, { status: 403 });
       }
       updates.boardId = body.boardId;
-      updates.assigneeId = null;
-      updates.createdBy = null;
       updates.projectId = null;
+
+      // Re-resolve assignee on destination board (member IDs are per-board)
+      if (task.assigneeId) {
+        const oldAssignee = await db.select().from(members).where(eq(members.id, task.assigneeId)).limit(1);
+        if (oldAssignee.length > 0) {
+          const { upsertMember } = await import("@/lib/db/queries");
+          const newAssignee = await upsertMember(
+            body.boardId,
+            oldAssignee[0].telegramUserId,
+            oldAssignee[0].username,
+            oldAssignee[0].firstName
+          );
+          updates.assigneeId = newAssignee.id;
+        } else {
+          updates.assigneeId = null;
+        }
+      }
+
+      // Re-resolve createdBy on destination board
+      if (task.createdBy) {
+        const oldCreator = await db.select().from(members).where(eq(members.id, task.createdBy)).limit(1);
+        if (oldCreator.length > 0) {
+          const { upsertMember } = await import("@/lib/db/queries");
+          const newCreator = await upsertMember(
+            body.boardId,
+            oldCreator[0].telegramUserId,
+            oldCreator[0].username,
+            oldCreator[0].firstName
+          );
+          updates.createdBy = newCreator.id;
+        } else {
+          updates.createdBy = null;
+        }
+      }
     }
   }
 
