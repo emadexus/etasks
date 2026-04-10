@@ -121,7 +121,7 @@ function BoardPicker({ currentBoardId, boards, onMove }: {
     <>
       <span
         className="cursor-pointer rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors active:opacity-70"
-        style={{ color: "var(--accent-orange)", background: "var(--accent-orange)18" }}
+        style={{ color: "var(--accent-orange)", background: "var(--accent-orange-bg)" }}
         onClick={(e) => { e.stopPropagation(); setOpen(true); }}
       >
         {currentLabel} ›
