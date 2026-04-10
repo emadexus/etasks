@@ -36,7 +36,7 @@ Use a small unobtrusive icon — same size as the existing comment-count icon. C
 
 If you can't easily target a group chat with deep link, just open the bot DM by default. Don't over-engineer this — the bot DM works for all cases since the bot has access to all boards.
 
-## Task 4: [ ] i18n labels
+## Task 4: [x] i18n labels
 **File:** `src/lib/i18n.ts`
 **Goal:** Add EN and RU labels:
 - `forwardToBot: "Forward to bot"` (EN)
