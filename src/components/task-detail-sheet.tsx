@@ -2,13 +2,16 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { useTaskDetail, useComments, useTaskActions, useMembers, useAttachments, useAttachmentActions, useHome } from "@/hooks/use-board";
+import { useTaskDetail, useComments, useTaskActions, useMembers, useAllMembers, useAttachments, useAttachmentActions, useHome } from "@/hooks/use-board";
 import { useTelegram } from "./telegram-provider";
 import { CommentThread } from "./comment-thread";
 import { ReminderChips } from "./reminder-chips";
 import { CalendarPicker } from "./calendar-picker";
 import { useToast } from "./toast";
 import { t } from "@/lib/i18n";
+
+const BOT_TELEGRAM_ID = "8433233305";
+const ADMIN_TELEGRAM_ID = "247463948";
 
 interface TaskDetailSheetProps {
   taskId: string | null;
@@ -118,7 +121,7 @@ function BoardPicker({ currentBoardId, boards, onMove }: {
     <>
       <span
         className="cursor-pointer rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors active:opacity-70"
-        style={{ color: "var(--accent-orange)", background: "var(--accent-orange)18" }}
+        style={{ color: "var(--accent-orange)", background: "var(--accent-orange-bg)" }}
         onClick={(e) => { e.stopPropagation(); setOpen(true); }}
       >
         {currentLabel} ›
@@ -156,7 +159,7 @@ function BoardPicker({ currentBoardId, boards, onMove }: {
                     <img src={b.photoUrl} alt="" className="h-6 w-6 rounded object-cover" />
                   ) : (
                     <span className="flex h-6 w-6 items-center justify-center rounded text-[11px] font-semibold" style={{ background: "var(--accent-blue)", color: "#fff" }}>
-                      {b.name[0].toUpperCase()}
+                      {(b.name?.[0] || "?").toUpperCase()}
                     </span>
                   )}
                   {b.name}
@@ -191,17 +194,26 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
   const { data: homeData } = useHome();
 
   // Resolve the correct chatId from the task's boardId (not the URL's chatId)
-  const taskBoardId = taskData?.task?.boardId;
+  const taskBoardId = taskData?.task?.boardId ?? (isDraft ? propBoardId : undefined);
   const resolvedChatId = taskBoardId
     ? (homeData?.boards as any[])?.find((b: any) => b.id === taskBoardId)?.chatId || chatId
-    : chatId;
+    : null; // personal inbox — no single board chatId, useAllMembers will aggregate
 
+  const { lang, userId } = useTelegram();
   const { data: membersData } = useMembers(resolvedChatId);
+  const { data: allMembersData } = useAllMembers(
+    !resolvedChatId ? (homeData?.boards as { id: string; chatId: string }[]) : undefined,
+  );
+  // For personal inbox tasks (no chatId), fall back to aggregated members from all boards
+  const effectiveMembers = membersData || allMembersData || [];
+  // Filter out bot from member list unless current user is admin
+  const filteredMembers = userId === ADMIN_TELEGRAM_ID
+    ? effectiveMembers
+    : effectiveMembers.filter((m: any) => String(m.telegramUserId) !== BOT_TELEGRAM_ID);
   const { updateTask, addComment, moveTask, deleteTask, createTask } = useTaskActions(resolvedChatId);
   const { data: attachmentsData, mutate: mutateAttachments } = useAttachments(activeId);
   const { uploadFile } = useAttachmentActions();
   const { showToast } = useToast();
-  const { lang } = useTelegram();
 
   const [localTask, setLocalTask] = useState<any>(isDraft ? {
     id: null, status: "todo", priority: "medium", boardId: propBoardId || null,
@@ -254,6 +266,36 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
     }
   }, [initialized, taskData, mutatedAt]);
 
+  const handleUpdate = useCallback(async (field: string, value: any) => {
+    // Always update local state (works for drafts before creation)
+    const prevAssignee = localAssignee;
+    const prevAssigneeSet = localAssigneeSet;
+    setLocalTask((prev: any) => prev ? { ...prev, [field]: value } : prev);
+    setMutatedAt(Date.now()); // Defer poll sync to prevent blink
+    // Optimistic assignee update
+    if (field === "assigneeId" && effectiveMembers.length > 0) {
+      const member = effectiveMembers.find((m: any) => m.id === value);
+      setLocalAssignee(member || null);
+      setLocalAssigneeSet(true);
+    }
+    // Only send to API if task exists on server
+    if (!activeId) return;
+    setSaving(true);
+    try {
+      await updateTask(activeId, { [field]: value });
+    } catch (e) {
+      console.error(e);
+      // Revert optimistic update on failure
+      setLocalTask((prev: any) => prev ? { ...prev, [field]: taskData?.task?.[field] } : prev);
+      if (field === "assigneeId") {
+        setLocalAssignee(prevAssignee);
+        setLocalAssigneeSet(prevAssigneeSet);
+      }
+      setMutatedAt(0); // Allow immediate server sync
+    }
+    setSaving(false);
+  }, [activeId, updateTask, effectiveMembers, localAssignee, localAssigneeSet, taskData]);
+
   // Draft: create task when title is entered
   const handleTitleBlur = useCallback(async () => {
     if (isDraft && !createdId) {
@@ -283,28 +325,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
     } else if (activeId && title !== (taskData?.task?.title || "")) {
       handleUpdate("title", title);
     }
-  }, [isDraft, createdId, title, chatId, createTask, activeId, taskData]);
-
-  const handleUpdate = useCallback(async (field: string, value: any) => {
-    // Always update local state (works for drafts before creation)
-    setLocalTask((prev: any) => prev ? { ...prev, [field]: value } : prev);
-    setMutatedAt(Date.now()); // Defer poll sync to prevent blink
-    // Optimistic assignee update
-    if (field === "assigneeId" && membersData) {
-      const member = membersData.find((m: any) => m.id === value);
-      setLocalAssignee(member || null);
-      setLocalAssigneeSet(true);
-    }
-    // Only send to API if task exists on server
-    if (!activeId) return;
-    setSaving(true);
-    try {
-      await updateTask(activeId, { [field]: value });
-    } catch (e) {
-      console.error(e);
-    }
-    setSaving(false);
-  }, [activeId, updateTask, membersData]);
+  }, [isDraft, createdId, title, chatId, createTask, activeId, taskData, handleUpdate, localTask]);
 
   const handleMultiUpdate = useCallback(async (updates: Record<string, any>) => {
     if (!activeId) return;
@@ -404,14 +425,15 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
           />
 
           <textarea
+            ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } }}
             className="mb-3 w-full resize-none bg-transparent text-[13px] outline-none"
-            style={{ color: "var(--text-secondary)", minHeight: "2.5em" }}
+            style={{ color: "var(--text-secondary)", minHeight: "2.5em", maxHeight: "40vh", overflowY: "auto" }}
             placeholder={t("addDescription")}
             rows={1}
             value={description}
             onChange={(e) => {
               setDescription(e.target.value);
-              // Auto-expand
+              // Auto-expand up to max-height, then scroll
               const el = e.target;
               el.style.height = "auto";
               el.style.height = el.scrollHeight + "px";
@@ -427,24 +449,27 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
           <div className="mb-4 flex flex-wrap items-center gap-1.5">
             <CycleLabel value={task.status} map={statusMap} onCycle={(next) => handleUpdate("status", next)} />
             <CycleLabel value={task.priority} map={priorityMap} onCycle={(next) => handleUpdate("priority", next)} />
-            {isBoard && (
-              <AssigneePicker
-                assignee={assignee}
-                members={membersData || []}
-                onChange={(id) => handleUpdate("assigneeId", id)}
-              />
-            )}
+            <AssigneePicker
+              assignee={assignee}
+              members={filteredMembers}
+              onChange={(id) => handleUpdate("assigneeId", id)}
+            />
             <BoardPicker
               currentBoardId={task.boardId}
               boards={homeData?.boards || []}
               onMove={async (newBoardId) => {
+                const prevBoardId = task.boardId;
                 try {
                   setLocalTask((prev: any) => prev ? { ...prev, boardId: newBoardId } : prev);
                   setMutatedAt(Date.now());
-                  await moveTask(task.id, newBoardId);
+                  if (task.id) {
+                    await moveTask(task.id, newBoardId);
+                  }
                   showToast(t("taskMoved"));
                 } catch (e) {
                   console.error("Move failed:", e);
+                  setLocalTask((prev: any) => prev ? { ...prev, boardId: prevBoardId } : prev);
+                  setMutatedAt(0); // Allow immediate server sync
                   showToast(lang === "ru" ? "Не удалось переместить" : "Move failed");
                 }
               }}

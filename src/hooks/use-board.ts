@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 import { useTelegram } from "@/components/telegram-provider";
-import { useCallback, useMemo, useRef, useEffect } from "react";
+import { useCallback, useMemo, useRef } from "react";
 
 // Use a ref so the fetcher always reads the LATEST initData,
 // not a stale closure value from when SWR first bound the fetcher.
@@ -68,6 +68,60 @@ export function useMembers(chatId: string | null) {
   const fetcher = useAuthFetcher();
   const key = useKeyWhenReady(chatId ? `/api/members?chatId=${chatId}` : null);
   return useSWR(key, fetcher, swrOpts);
+}
+
+/**
+ * Aggregate members from all boards the user belongs to.
+ * Used as a fallback for personal inbox tasks (boardId=null) where
+ * there's no single chatId to fetch members from.
+ * Deduplicates by telegramUserId, keeping the first occurrence.
+ */
+export function useAllMembers(boards: { id: string; chatId: string }[] | undefined) {
+  const fetcher = useAuthFetcher();
+  const authReady = useAuthReady();
+
+  // Build stable SWR keys for each board's members
+  // Stabilize by serializing chatIds — avoids recomputation when SWR returns new array references
+  const boardsKey = JSON.stringify((boards || []).map((b) => b.chatId).sort());
+  const chatIds = useMemo(
+    () => JSON.parse(boardsKey) as string[],
+    [boardsKey],
+  );
+
+  // Fetch members for each board in parallel using SWR's multi-key pattern
+  const keys = useMemo(
+    () => (authReady ? chatIds.map((cid) => `/api/members?chatId=${cid}`) : []),
+    [authReady, chatIds],
+  );
+
+  // Use a single SWR call with a composite key that fetches all and deduplicates
+  const compositeKey = useMemo(
+    () => (keys.length > 0 ? `__allMembers__:${keys.join(",")}` : null),
+    [keys],
+  );
+
+  const compositeFetcher = useCallback(
+    async () => {
+      const results = await Promise.all(keys.map((k) => fetcher(k)));
+      // Flatten and deduplicate by telegramUserId
+      const seen = new Set<string>();
+      const deduped: any[] = [];
+      for (const memberList of results) {
+        if (!Array.isArray(memberList)) continue;
+        for (const m of memberList) {
+          const tuid = m.telegramUserId?.toString() ?? m.id?.toString();
+          if (tuid && !seen.has(tuid)) {
+            seen.add(tuid);
+            deduped.push(m);
+          }
+        }
+      }
+      return deduped;
+    },
+    [keys, fetcher],
+  );
+
+  return useSWR(compositeKey, compositeFetcher, { ...swrOpts, refreshInterval: 30000 });
 }
 
 export function useTasks(chatId: string | null, filters?: Record<string, string>) {
@@ -216,7 +270,8 @@ export function useAttachments(taskId: string | null) {
 export function useAttachmentActions() {
   const { initData } = useTelegram();
   const initDataRef = useRef(initData);
-  useEffect(() => { initDataRef.current = initData; }, [initData]);
+  // Sync update during render — useEffect is too late (same pattern as useAuthFetcher)
+  initDataRef.current = initData;
 
   return useMemo(() => ({
     uploadFile: async (taskId: string, file: File) => {
