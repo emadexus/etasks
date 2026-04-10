@@ -10,11 +10,12 @@ export async function getOrCreateUser(telegramUserId: bigint, username: string |
     .limit(1);
 
   if (existing.length > 0) {
-    // Update username/firstName if changed
     if (existing[0].username !== username || existing[0].firstName !== firstName) {
-      await db.update(users)
+      const [updated] = await db.update(users)
         .set({ username, firstName })
-        .where(eq(users.id, existing[0].id));
+        .where(eq(users.id, existing[0].id))
+        .returning();
+      return updated;
     }
     return existing[0];
   }
