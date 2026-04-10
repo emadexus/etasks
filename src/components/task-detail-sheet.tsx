@@ -10,6 +10,9 @@ import { CalendarPicker } from "./calendar-picker";
 import { useToast } from "./toast";
 import { t } from "@/lib/i18n";
 
+const BOT_TELEGRAM_ID = "8433233305";
+const ADMIN_TELEGRAM_ID = "247463948";
+
 interface TaskDetailSheetProps {
   taskId: string | null;
   chatId: string | null;
@@ -156,7 +159,7 @@ function BoardPicker({ currentBoardId, boards, onMove }: {
                     <img src={b.photoUrl} alt="" className="h-6 w-6 rounded object-cover" />
                   ) : (
                     <span className="flex h-6 w-6 items-center justify-center rounded text-[11px] font-semibold" style={{ background: "var(--accent-blue)", color: "#fff" }}>
-                      {b.name[0].toUpperCase()}
+                      {(b.name?.[0] || "?").toUpperCase()}
                     </span>
                   )}
                   {b.name}
@@ -196,6 +199,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
     ? (homeData?.boards as any[])?.find((b: any) => b.id === taskBoardId)?.chatId || chatId
     : chatId;
 
+  const { lang, userId } = useTelegram();
   const { data: membersData } = useMembers(resolvedChatId);
   const { data: allMembersData } = useAllMembers(
     !resolvedChatId ? (homeData?.boards as { id: string; chatId: string }[]) : undefined,
@@ -203,8 +207,6 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
   // For personal inbox tasks (no chatId), fall back to aggregated members from all boards
   const effectiveMembers = membersData || allMembersData || [];
   // Filter out bot from member list unless current user is admin
-  const BOT_TELEGRAM_ID = "8433233305";
-  const ADMIN_TELEGRAM_ID = "247463948";
   const filteredMembers = userId === ADMIN_TELEGRAM_ID
     ? effectiveMembers
     : effectiveMembers.filter((m: any) => String(m.telegramUserId) !== BOT_TELEGRAM_ID);
@@ -212,7 +214,6 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
   const { data: attachmentsData, mutate: mutateAttachments } = useAttachments(activeId);
   const { uploadFile } = useAttachmentActions();
   const { showToast } = useToast();
-  const { lang, userId } = useTelegram();
 
   const [localTask, setLocalTask] = useState<any>(isDraft ? {
     id: null, status: "todo", priority: "medium", boardId: propBoardId || null,
@@ -415,6 +416,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
           />
 
           <textarea
+            ref={(el) => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } }}
             className="mb-3 w-full resize-none bg-transparent text-[13px] outline-none"
             style={{ color: "var(--text-secondary)", minHeight: "2.5em", maxHeight: "40vh", overflowY: "auto" }}
             placeholder={t("addDescription")}

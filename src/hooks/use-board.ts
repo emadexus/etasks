@@ -81,9 +81,11 @@ export function useAllMembers(boards: { id: string; chatId: string }[] | undefin
   const authReady = useAuthReady();
 
   // Build stable SWR keys for each board's members
+  // Stabilize by serializing chatIds — avoids recomputation when SWR returns new array references
+  const boardsKey = JSON.stringify((boards || []).map((b) => b.chatId).sort());
   const chatIds = useMemo(
-    () => (boards || []).map((b) => b.chatId).sort(),
-    [boards],
+    () => JSON.parse(boardsKey) as string[],
+    [boardsKey],
   );
 
   // Fetch members for each board in parallel using SWR's multi-key pattern
