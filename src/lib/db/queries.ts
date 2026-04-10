@@ -10,9 +10,11 @@ export async function getOrCreateUser(telegramUserId: bigint, username: string |
     .limit(1);
 
   if (existing.length > 0) {
-    if (existing[0].username !== username || existing[0].firstName !== firstName) {
+    const newUsername = username ?? existing[0].username;
+    const newFirstName = firstName || existing[0].firstName;
+    if (existing[0].username !== newUsername || existing[0].firstName !== newFirstName) {
       const [updated] = await db.update(users)
-        .set({ username, firstName })
+        .set({ username: newUsername, firstName: newFirstName })
         .where(eq(users.id, existing[0].id))
         .returning();
       return updated;
@@ -57,18 +59,35 @@ export async function upsertMember(boardId: string, telegramUserId: bigint, user
     .limit(1);
 
   if (existing.length > 0) {
+    const newUsername = username ?? existing[0].username;
+    const newFirstName = (firstName && firstName !== "User") ? firstName : existing[0].firstName;
     const [updated] = await db.update(members)
-      .set({ username, firstName, leftAt: null })
+      .set({ username: newUsername, firstName: newFirstName, leftAt: null })
       .where(eq(members.id, existing[0].id))
       .returning();
     return updated;
   }
 
+  // For new members, try to get name from users table if not provided
+  let resolvedFirstName = firstName;
+  let resolvedUsername = username;
+  if (!firstName || firstName === "User") {
+    const userRecord = await db.select().from(users)
+      .where(eq(users.telegramUserId, telegramUserId))
+      .limit(1);
+    if (userRecord.length > 0) {
+      resolvedFirstName = userRecord[0].firstName;
+      resolvedUsername = resolvedUsername ?? userRecord[0].username;
+    } else {
+      resolvedFirstName = firstName || "Unknown";
+    }
+  }
+
   const [member] = await db.insert(members).values({
     boardId,
     telegramUserId,
-    username,
-    firstName,
+    username: resolvedUsername,
+    firstName: resolvedFirstName,
   }).returning();
   return member;
 }

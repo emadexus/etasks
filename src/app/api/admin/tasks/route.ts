@@ -203,14 +203,14 @@ export async function POST(req: NextRequest) {
     const lang = board.language || "en";
 
     // Upsert author as member
-    const authorMember = await upsertMember(board.id, authorTgId, null, authorName || admin.firstName);
+    const authorMember = await upsertMember(board.id, authorTgId, admin.username, authorName || admin.firstName);
 
     // Resolve assignee
     let assigneeMemberId: string | null = null;
     let assigneeUsername: string | null = null;
     let assigneeMember: any = null;
     if (assigneeTelegramId) {
-      assigneeMember = await upsertMember(board.id, BigInt(assigneeTelegramId), null, assigneeName || "User");
+      assigneeMember = await upsertMember(board.id, BigInt(assigneeTelegramId), null, assigneeName || "");
       assigneeMemberId = assigneeMember.id;
       assigneeUsername = assigneeMember.username;
     }
