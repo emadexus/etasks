@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const chatId = req.nextUrl.searchParams.get("chatId");
   if (!chatId) return NextResponse.json({ error: "chatId required" }, { status: 400 });
-  if (!/^\d+$/.test(chatId)) return NextResponse.json({ error: "Invalid chatId" }, { status: 400 });
+  if (!/^-?\d+$/.test(chatId)) return NextResponse.json({ error: "Invalid chatId" }, { status: 400 });
 
   const board = await getBoardByChatId(BigInt(chatId));
   if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
 
   // Board task (group) vs personal/project task
   if (chatId) {
-    if (!/^\d+$/.test(String(chatId))) return NextResponse.json({ error: "Invalid chatId" }, { status: 400 });
+    if (!/^-?\d+$/.test(String(chatId))) return NextResponse.json({ error: "Invalid chatId" }, { status: 400 });
     const board = await getBoardByChatId(BigInt(chatId));
     if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
 
