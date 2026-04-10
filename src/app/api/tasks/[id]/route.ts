@@ -1,25 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/telegram/auth";
 import { db } from "@/lib/db";
-import { tasks, taskReminders, comments, members, boards } from "@/lib/db/schema";
+import { tasks, taskReminders, taskAttachments, comments, members, boards } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getTaskWithDetails, getMemberByTelegramId, getRemindersForTask } from "@/lib/db/queries";
 import { cancelReminders, scheduleReminders, toggleReminder } from "@/lib/qstash/reminders";
 import { createNextRecurrence } from "@/lib/recurrence";
 import { notifyGroup, formatAssigneeChanged } from "@/lib/telegram/notify";
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const auth = await getAuthUser(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!UUID_REGEX.test(id)) return NextResponse.json({ error: "Invalid UUID format" }, { status: 400 });
 
   const result = await getTaskWithDetails(id);
   if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Bot task protection: non-admin cannot view bot tasks
-  const BOT_TG_ID = BigInt("8433233305");
-  const ADMIN_TG_ID = BigInt("247463948");
-  if (result.assignee?.telegramUserId === BOT_TG_ID && auth.userId !== ADMIN_TG_ID) {
+  const isOwner = result.task.ownerId === auth.dbUserId;
+  if (result.task.boardId && !isOwner) {
+    const member = await getMemberByTelegramId(result.task.boardId, auth.userId);
+    if (!member) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  } else if (!result.task.boardId && !isOwner) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -39,18 +43,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const auth = await getAuthUser(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!UUID_REGEX.test(id)) return NextResponse.json({ error: "Invalid UUID format" }, { status: 400 });
 
   const result = await getTaskWithDetails(id);
   if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const task = result.task;
-
-  // Bot task protection: non-admin cannot modify bot tasks
-  const BOT_TG_ID_PATCH = BigInt("8433233305");
-  const ADMIN_TG_ID_PATCH = BigInt("247463948");
-  if (result.assignee?.telegramUserId === BOT_TG_ID_PATCH && auth.userId !== ADMIN_TG_ID_PATCH) {
-    return NextResponse.json({ error: "Only admin can modify bot tasks" }, { status: 403 });
-  }
 
   // Authorization: task owner can always edit; board tasks require membership
   const isOwner = task.ownerId === auth.dbUserId;
@@ -200,6 +198,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { id } = await params;
   const auth = await getAuthUser(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!UUID_REGEX.test(id)) return NextResponse.json({ error: "Invalid UUID format" }, { status: 400 });
 
   const result = await getTaskWithDetails(id);
   if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -215,6 +214,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   await cancelReminders(id);
   await db.delete(taskReminders).where(eq(taskReminders.taskId, id));
+  await db.delete(taskAttachments).where(eq(taskAttachments.taskId, id));
   await db.delete(comments).where(eq(comments.taskId, id));
   await db.delete(tasks).where(eq(tasks.id, id));
 

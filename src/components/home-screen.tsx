@@ -24,7 +24,6 @@ const smartFilters = [
   { key: "next7days", labelKey: "next7days" as const, color: "#6366f1", icon: "calendar" as const },
   { key: "completed", labelKey: "completed" as const, color: "#34d399", icon: "check" as const },
   { key: "archived",  labelKey: "archived" as const,  color: "#6e6879", icon: "archive" as const },
-  { key: "ooih",      labelKey: "ooih" as const,      color: "#8b5cf6", icon: "bot" as const },
 ];
 
 function FilterIcon({ color, icon }: { color: string; icon: string }) {
@@ -100,18 +99,6 @@ function FilterIcon({ color, icon }: { color: string; icon: string }) {
             <rect x="1" y="1.5" width="14" height="3.5" rx="1" />
             <path d="M2.5 5v8.5a1.5 1.5 0 001.5 1.5h8a1.5 1.5 0 001.5-1.5V5" />
             <path d="M6.5 8.5h3" />
-          </svg>
-        );
-      case "bot":
-        // Robot face
-        return (
-          <svg {...svgProps}>
-            <rect x="3" y="4" width="10" height="9" rx="2" />
-            <circle cx="6" cy="8" r="1" fill="#fff" stroke="none" />
-            <circle cx="10" cy="8" r="1" fill="#fff" stroke="none" />
-            <path d="M6.5 11h3" />
-            <path d="M8 1.5v2.5" />
-            <circle cx="8" cy="1.5" r="1" />
           </svg>
         );
       default:
@@ -227,7 +214,7 @@ function SettingsSheet({ user, boards, onClose }: {
 }
 
 export function HomeScreen() {
-  const { ready, openTaskId, startBoardChatId, userId: tgUserId } = useTelegram();
+  const { ready, openTaskId, startBoardChatId } = useTelegram();
   const { data: home, error: homeError } = useHome();
   const { data: deepLinkTask } = useTaskDetail(openTaskId);
 
@@ -444,7 +431,6 @@ export function HomeScreen() {
         <div className="mb-6 overflow-hidden rounded-2xl" style={{ borderLeft: "2px solid var(--accent-purple)" }}>
           <div className="card-elevated glass overflow-hidden rounded-2xl">
             {smartFilters.filter(f => f.key !== "today" && f.key !== "inbox" && f.key !== "all")
-            .filter(f => f.key !== "ooih" || tgUserId === "247463948")
             .map((f, i) => {
               const count = counts?.[f.key as keyof typeof counts] ?? 0;
               return (

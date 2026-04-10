@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
 
   // Board filter
   if (chatId) {
+    if (!/^-?\d+$/.test(chatId)) return NextResponse.json({ error: "Invalid chatId" }, { status: 400 });
     const board = await getBoardByChatId(BigInt(chatId));
     if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
     conditions.push(eq(tasks.boardId, board.id));
@@ -195,7 +196,7 @@ export async function POST(req: NextRequest) {
   const authorUser = await getOrCreateUser(authorTgId, null, authorName || admin.firstName);
 
   if (chatId) {
-    // Board task
+    if (!/^-?\d+$/.test(String(chatId))) return NextResponse.json({ error: "Invalid chatId" }, { status: 400 });
     const board = await getBoardByChatId(BigInt(chatId));
     if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
 

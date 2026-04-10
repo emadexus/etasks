@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
 
   const chatId = req.nextUrl.searchParams.get("chatId");
   if (!chatId) return NextResponse.json({ error: "chatId required" }, { status: 400 });
+  if (!/^-?\d+$/.test(chatId)) return NextResponse.json({ error: "Invalid chatId" }, { status: 400 });
 
   const board = await getBoardByChatId(BigInt(chatId));
   if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
@@ -55,13 +56,7 @@ export async function GET(req: NextRequest) {
     .where(and(...conditions))
     .orderBy(orderBy);
 
-  // Filter out bot tasks for non-admin users
-  const BOT_TG_ID = BigInt("8433233305");
-  const ADMIN_TG_ID = BigInt("247463948");
-  const isAdmin = auth.userId === ADMIN_TG_ID;
-
   const serialized = result
-    .filter((r) => isAdmin || r.assignee?.telegramUserId !== BOT_TG_ID)
     .map((r) => ({
       ...r,
       assignee: r.assignee?.id ? {
@@ -86,6 +81,7 @@ export async function POST(req: NextRequest) {
 
   // Board task (group) vs personal/project task
   if (chatId) {
+    if (!/^-?\d+$/.test(String(chatId))) return NextResponse.json({ error: "Invalid chatId" }, { status: 400 });
     const board = await getBoardByChatId(BigInt(chatId));
     if (!board) return NextResponse.json({ error: "Board not found" }, { status: 404 });
 

@@ -10,11 +10,12 @@ export async function getOrCreateUser(telegramUserId: bigint, username: string |
     .limit(1);
 
   if (existing.length > 0) {
-    // Update username/firstName if changed
     if (existing[0].username !== username || existing[0].firstName !== firstName) {
-      await db.update(users)
+      const [updated] = await db.update(users)
         .set({ username, firstName })
-        .where(eq(users.id, existing[0].id));
+        .where(eq(users.id, existing[0].id))
+        .returning();
+      return updated;
     }
     return existing[0];
   }
@@ -48,13 +49,6 @@ export async function getMemberByTelegramId(boardId: string, telegramUserId: big
 }
 
 export async function upsertMember(boardId: string, telegramUserId: bigint, username: string | null, firstName: string) {
-  // Bot identity: always use correct name regardless of what caller passes
-  const BOT_TG_ID = BigInt("8433233305");
-  if (telegramUserId === BOT_TG_ID) {
-    firstName = "Ooih";
-    username = "oooih_bot";
-  }
-
   const existing = await db.select().from(members)
     .where(and(
       eq(members.boardId, boardId),
@@ -63,10 +57,11 @@ export async function upsertMember(boardId: string, telegramUserId: bigint, user
     .limit(1);
 
   if (existing.length > 0) {
-    await db.update(members)
+    const [updated] = await db.update(members)
       .set({ username, firstName, leftAt: null })
-      .where(eq(members.id, existing[0].id));
-    return existing[0];
+      .where(eq(members.id, existing[0].id))
+      .returning();
+    return updated;
   }
 
   const [member] = await db.insert(members).values({
@@ -182,21 +177,6 @@ export async function getSmartFilterCounts(userId: string) {
   const [archivedCount] = await db.select({ value: count() }).from(tasks)
     .where(and(eq(tasks.ownerId, userId), sql`${tasks.archivedAt} IS NOT NULL`));
 
-  // Bot (Ooih) tasks — across ALL boards, assigned to bot member records
-  const botMemberIds = await db.select({ id: members.id }).from(members)
-    .where(eq(members.telegramUserId, BigInt("8433233305")));
-  const botIds = botMemberIds.map(m => m.id);
-  let ooihCount = 0;
-  if (botIds.length > 0) {
-    const [c] = await db.select({ value: count() }).from(tasks)
-      .where(and(
-        sql`${tasks.assigneeId} IN (${sql.join(botIds.map(id => sql`${id}`), sql`, `)})`,
-        sql`${tasks.status} != 'done'`,
-        isNull(tasks.archivedAt),
-      ));
-    ooihCount = c.value;
-  }
-
   return {
     all: allCount.value,
     inbox: inboxCount.value,
@@ -205,7 +185,6 @@ export async function getSmartFilterCounts(userId: string) {
     next7days: next7Count.value,
     completed: completedCount.value,
     archived: archivedCount.value,
-    ooih: ooihCount,
   };
 }
 
@@ -258,19 +237,6 @@ export async function getFilteredTasks(userId: string, filter: string, projectId
       case "archived":
         whereClause = and(eq(tasks.ownerId, userId), sql`${tasks.archivedAt} IS NOT NULL`);
         break;
-      case "ooih": {
-        // Bot tasks — across all boards, assigned to bot member records
-        const botMembers = await db.select({ id: members.id }).from(members)
-          .where(eq(members.telegramUserId, BigInt("8433233305")));
-        const bIds = botMembers.map(m => m.id);
-        if (bIds.length === 0) return [];
-        whereClause = and(
-          sql`${tasks.assigneeId} IN (${sql.join(bIds.map(id => sql`${id}`), sql`, `)})`,
-          sql`${tasks.status} != 'done'`,
-          isNull(tasks.archivedAt),
-        );
-        break;
-      }
       default: // "all"
         whereClause = and(baseWhere, sql`${tasks.status} != 'done'`);
         break;

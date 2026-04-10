@@ -10,16 +10,14 @@ export async function GET(req: NextRequest) {
   const projectId = req.nextUrl.searchParams.get("projectId") || undefined;
   const chatId = req.nextUrl.searchParams.get("chatId") || undefined;
 
+  if (chatId && !/^-?\d+$/.test(chatId)) {
+    return NextResponse.json({ error: "Invalid chatId" }, { status: 400 });
+  }
+
   const result = await getFilteredTasks(auth.dbUserId, filter, projectId, chatId);
 
-  // Filter out bot tasks for non-admin users
-  const BOT_TG_ID = BigInt("8433233305");
-  const ADMIN_TG_ID = BigInt("247463948");
-  const isAdmin = auth.userId === ADMIN_TG_ID;
-  const filtered = isAdmin ? result : result.filter((r) => r.assignee?.telegramUserId !== BOT_TG_ID);
-
   return NextResponse.json(
-    filtered.map((r) => ({
+    result.map((r) => ({
       task: r.task,
       assignee: r.assignee
         ? {
