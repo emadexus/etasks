@@ -48,13 +48,6 @@ export async function getMemberByTelegramId(boardId: string, telegramUserId: big
 }
 
 export async function upsertMember(boardId: string, telegramUserId: bigint, username: string | null, firstName: string) {
-  // Bot identity: always use correct name regardless of what caller passes
-  const BOT_TG_ID = BigInt("8433233305");
-  if (telegramUserId === BOT_TG_ID) {
-    firstName = "Ooih";
-    username = "oooih_bot";
-  }
-
   const existing = await db.select().from(members)
     .where(and(
       eq(members.boardId, boardId),

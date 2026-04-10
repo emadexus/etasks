@@ -35,7 +35,7 @@ Files to read for context:
 **Problem:** GET and PATCH check if the task assignee is the bot (8433233305) and return 404/403 for non-admin. List endpoints filter out bot tasks. All this complexity exists to hide bot tasks from non-admin users.
 **Fix:** Remove the bot Telegram ID checks and the `BOT_TG_ID`/`ADMIN_TG_ID` constants from these route files. Bot tasks no longer exist in eTask, so this filtering is obsolete. Just let the normal authorization (board membership) handle access.
 
-## Task 5: [ ] Remove bot identity override in upsertMember
+## Task 5: [x] Remove bot identity override in upsertMember
 **File:** `src/lib/db/queries.ts` (`upsertMember`)
 **Problem:** The function has a special case: if `telegramUserId === BigInt("8433233305")`, override `firstName="Ooih"` and `username="oooih_bot"`. This was needed because the bot was being added as a member when the migration script ran. With bot tasks gone from eTask, this is dead code.
 **Fix:** Remove the bot ID check at the top of `upsertMember`. The function should treat all telegram IDs equally.
