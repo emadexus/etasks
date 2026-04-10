@@ -204,7 +204,6 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
   );
   // For personal inbox tasks (no chatId), fall back to aggregated members from all boards
   const effectiveMembers = membersData || allMembersData || [];
-  const filteredMembers = effectiveMembers;
   const { updateTask, addComment, moveTask, deleteTask, createTask } = useTaskActions(resolvedChatId);
   const { data: attachmentsData, mutate: mutateAttachments } = useAttachments(activeId);
   const { uploadFile } = useAttachmentActions();
@@ -446,7 +445,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
             <CycleLabel value={task.priority} map={priorityMap} onCycle={(next) => handleUpdate("priority", next)} />
             <AssigneePicker
               assignee={assignee}
-              members={filteredMembers}
+              members={effectiveMembers}
               onChange={(id) => handleUpdate("assigneeId", id)}
             />
             <BoardPicker

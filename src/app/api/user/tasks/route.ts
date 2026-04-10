@@ -10,6 +10,10 @@ export async function GET(req: NextRequest) {
   const projectId = req.nextUrl.searchParams.get("projectId") || undefined;
   const chatId = req.nextUrl.searchParams.get("chatId") || undefined;
 
+  if (chatId && !/^\d+$/.test(chatId)) {
+    return NextResponse.json({ error: "Invalid chatId" }, { status: 400 });
+  }
+
   const result = await getFilteredTasks(auth.dbUserId, filter, projectId, chatId);
 
   return NextResponse.json(
