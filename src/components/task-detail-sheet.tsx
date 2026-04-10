@@ -370,32 +370,55 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
             <div className="mx-auto h-1 w-10 cursor-pointer rounded-full" style={{ background: "var(--text-dim)" }} onClick={onClose} />
             <div className="flex flex-1 justify-end">
               {activeId && (
-                <button
-                  className="rounded-md p-1 transition-colors active:bg-white/10"
-                  style={{ color: "var(--text-dim)" }}
-                  onClick={() => {
-                    const botUsername = process.env.NEXT_PUBLIC_BOT_USERNAME || "e_task_bot";
-                    const link = `https://t.me/${botUsername}/open?startapp=task${task.id}`;
-                    if (navigator.clipboard?.writeText) {
-                      navigator.clipboard.writeText(link).then(() => showToast(lang === "ru" ? "Ссылка скопирована" : "Link copied"));
-                    } else {
-                      const ta = document.createElement("textarea");
-                      ta.value = link;
-                      ta.style.position = "fixed";
-                      ta.style.opacity = "0";
-                      document.body.appendChild(ta);
-                      ta.select();
-                      document.execCommand("copy");
-                      document.body.removeChild(ta);
-                      showToast(lang === "ru" ? "Ссылка скопирована" : "Link copied");
-                    }
-                  }}
-                >
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
-                    <path d="M10.5 5.5V3.5a1.5 1.5 0 00-1.5-1.5H3.5A1.5 1.5 0 002 3.5V9a1.5 1.5 0 001.5 1.5h2" />
-                  </svg>
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    className="rounded-md p-1 transition-colors active:bg-white/10"
+                    style={{ color: "var(--text-dim)" }}
+                    onClick={() => {
+                      const taskLink = `https://t.me/oooih_bot/open?startapp=task${task.id}`;
+                      const text = `${taskLink}\n\n`;
+                      const deepLink = `https://t.me/oooih_bot?text=${encodeURIComponent(text)}`;
+                      const tg = (window as any).Telegram?.WebApp;
+                      if (tg?.openTelegramLink) {
+                        tg.openTelegramLink(deepLink);
+                      } else {
+                        window.open(deepLink, "_blank");
+                      }
+                    }}
+                    title={t("forwardToBot")}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2L7 9" />
+                      <path d="M14 2L9.5 14L7 9L2 6.5L14 2Z" />
+                    </svg>
+                  </button>
+                  <button
+                    className="rounded-md p-1 transition-colors active:bg-white/10"
+                    style={{ color: "var(--text-dim)" }}
+                    onClick={() => {
+                      const botUsername = process.env.NEXT_PUBLIC_BOT_USERNAME || "e_task_bot";
+                      const link = `https://t.me/${botUsername}/open?startapp=task${task.id}`;
+                      if (navigator.clipboard?.writeText) {
+                        navigator.clipboard.writeText(link).then(() => showToast(lang === "ru" ? "Ссылка скопирована" : "Link copied"));
+                      } else {
+                        const ta = document.createElement("textarea");
+                        ta.value = link;
+                        ta.style.position = "fixed";
+                        ta.style.opacity = "0";
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand("copy");
+                        document.body.removeChild(ta);
+                        showToast(lang === "ru" ? "Ссылка скопирована" : "Link copied");
+                      }
+                    }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" />
+                      <path d="M10.5 5.5V3.5a1.5 1.5 0 00-1.5-1.5H3.5A1.5 1.5 0 002 3.5V9a1.5 1.5 0 001.5 1.5h2" />
+                    </svg>
+                  </button>
+                </div>
               )}
             </div>
           </div>

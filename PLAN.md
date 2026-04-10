@@ -26,7 +26,7 @@ The pre-filled text should be: `<task-link>\n\n` so the user just types their in
 
 Use a small unobtrusive icon — same size as the existing comment-count icon. Color: muted, becomes accent on hover.
 
-## Task 2: [ ] Add forward-to-bot button to TaskDetailSheet
+## Task 2: [x] Add forward-to-bot button to TaskDetailSheet
 **File:** `src/components/task-detail-sheet.tsx`
 **Goal:** Same button in the task detail bottom sheet. Place it near the "copy link" button that already exists. Same behavior as Task 1.
 
