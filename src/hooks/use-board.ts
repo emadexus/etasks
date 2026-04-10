@@ -109,7 +109,7 @@ export function useAllMembers(boards: { id: string; chatId: string }[] | undefin
       for (const memberList of results) {
         if (!Array.isArray(memberList)) continue;
         for (const m of memberList) {
-          const tuid = m.telegramUserId?.toString() || m.id?.toString();
+          const tuid = m.telegramUserId?.toString() ?? m.id?.toString();
           if (tuid && !seen.has(tuid)) {
             seen.add(tuid);
             deduped.push(m);
