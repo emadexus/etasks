@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 import { useTelegram } from "@/components/telegram-provider";
-import { useCallback, useMemo, useRef, useEffect } from "react";
+import { useCallback, useMemo, useRef } from "react";
 
 // Use a ref so the fetcher always reads the LATEST initData,
 // not a stale closure value from when SWR first bound the fetcher.
@@ -270,7 +270,8 @@ export function useAttachments(taskId: string | null) {
 export function useAttachmentActions() {
   const { initData } = useTelegram();
   const initDataRef = useRef(initData);
-  useEffect(() => { initDataRef.current = initData; }, [initData]);
+  // Sync update during render — useEffect is too late (same pattern as useAuthFetcher)
+  initDataRef.current = initData;
 
   return useMemo(() => ({
     uploadFile: async (taskId: string, file: File) => {
