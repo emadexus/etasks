@@ -375,7 +375,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
                   <button
                     className="rounded-md p-1 transition-colors active:bg-white/10"
                     style={{ color: "var(--text-dim)" }}
-                    onClick={() => openBotDeepLink(task.id)}
+                    onClick={() => openBotDeepLink(activeId!)}
                     title={t("forwardToBot")}
                   >
                     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -387,7 +387,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
                     className="rounded-md p-1 transition-colors active:bg-white/10"
                     style={{ color: "var(--text-dim)" }}
                     onClick={() => {
-                      const link = getTaskLink(task.id);
+                      const link = getTaskLink(activeId!);
                       if (navigator.clipboard?.writeText) {
                         navigator.clipboard.writeText(link)
                           .then(() => showToast(lang === "ru" ? "Ссылка скопирована" : "Link copied"))

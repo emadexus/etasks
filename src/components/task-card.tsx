@@ -15,7 +15,6 @@ interface TaskCardProps {
     assigneeId: string | null;
     tags: string | null;
     checklist: string | null;
-    boardId: string | null;
   };
   assignee: {
     firstName: string;
