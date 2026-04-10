@@ -316,7 +316,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
     } else if (activeId && title !== (taskData?.task?.title || "")) {
       handleUpdate("title", title);
     }
-  }, [isDraft, createdId, title, chatId, createTask, activeId, taskData, handleUpdate]);
+  }, [isDraft, createdId, title, chatId, createTask, activeId, taskData, handleUpdate, localTask]);
 
   const handleMultiUpdate = useCallback(async (updates: Record<string, any>) => {
     if (!activeId) return;
