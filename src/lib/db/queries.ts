@@ -182,21 +182,6 @@ export async function getSmartFilterCounts(userId: string) {
   const [archivedCount] = await db.select({ value: count() }).from(tasks)
     .where(and(eq(tasks.ownerId, userId), sql`${tasks.archivedAt} IS NOT NULL`));
 
-  // Bot (Ooih) tasks — across ALL boards, assigned to bot member records
-  const botMemberIds = await db.select({ id: members.id }).from(members)
-    .where(eq(members.telegramUserId, BigInt("8433233305")));
-  const botIds = botMemberIds.map(m => m.id);
-  let ooihCount = 0;
-  if (botIds.length > 0) {
-    const [c] = await db.select({ value: count() }).from(tasks)
-      .where(and(
-        sql`${tasks.assigneeId} IN (${sql.join(botIds.map(id => sql`${id}`), sql`, `)})`,
-        sql`${tasks.status} != 'done'`,
-        isNull(tasks.archivedAt),
-      ));
-    ooihCount = c.value;
-  }
-
   return {
     all: allCount.value,
     inbox: inboxCount.value,
@@ -205,7 +190,6 @@ export async function getSmartFilterCounts(userId: string) {
     next7days: next7Count.value,
     completed: completedCount.value,
     archived: archivedCount.value,
-    ooih: ooihCount,
   };
 }
 

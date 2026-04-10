@@ -20,7 +20,7 @@ Files to read for context:
 **Problem:** The smart filters list includes an "ooih" entry that shows bot tasks. With the bot's tasks moved out of eTask entirely, this filter is dead.
 **Fix:** Remove the `{ key: "ooih", ... }` entry from the `smartFilters` array. Remove the admin check filter (`.filter(f => f.key !== "ooih" || tgUserId === "247463948")`) since it's no longer needed. Remove the "bot" icon case from the FilterIcon component.
 
-## Task 2: [ ] Remove ooih count from home API
+## Task 2: [x] Remove ooih count from home API
 **Files:** `src/lib/db/queries.ts` (`getSmartFilterCounts`), `src/app/api/home/route.ts`
 **Problem:** `getSmartFilterCounts` calculates an `ooih` count by querying bot member records. This is dead code now.
 **Fix:** Remove the bot member ID lookup and `ooihCount` calculation. Remove `ooih: ooihCount` from the returned object. Remove any references to the bot Telegram ID in this function.
