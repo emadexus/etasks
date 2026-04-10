@@ -40,7 +40,7 @@ Files to read for context:
 **Problem:** The function has a special case: if `telegramUserId === BigInt("8433233305")`, override `firstName="Ooih"` and `username="oooih_bot"`. This was needed because the bot was being added as a member when the migration script ran. With bot tasks gone from eTask, this is dead code.
 **Fix:** Remove the bot ID check at the top of `upsertMember`. The function should treat all telegram IDs equally.
 
-## Task 6: [ ] Remove ooih i18n strings
+## Task 6: [x] Remove ooih i18n strings
 **File:** `src/lib/i18n.ts`
 **Problem:** "Ooih Bot" and "Ooih Бот" labels exist in the EN and RU translation maps but are no longer referenced.
 **Fix:** Remove the `ooih:` lines from both EN and RU translation objects.
