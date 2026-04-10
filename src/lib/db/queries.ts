@@ -235,7 +235,7 @@ export async function getFilteredTasks(userId: string, filter: string, projectId
       case "archived":
         whereClause = and(eq(tasks.ownerId, userId), sql`${tasks.archivedAt} IS NOT NULL`);
         break;
-default: // "all"
+      default: // "all"
         whereClause = and(baseWhere, sql`${tasks.status} != 'done'`);
         break;
     }

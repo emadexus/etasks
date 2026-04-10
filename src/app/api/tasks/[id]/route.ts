@@ -8,10 +8,13 @@ import { cancelReminders, scheduleReminders, toggleReminder } from "@/lib/qstash
 import { createNextRecurrence } from "@/lib/recurrence";
 import { notifyGroup, formatAssigneeChanged } from "@/lib/telegram/notify";
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const auth = await getAuthUser(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!UUID_REGEX.test(id)) return NextResponse.json({ error: "Invalid UUID format" }, { status: 400 });
 
   const result = await getTaskWithDetails(id);
   if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -32,6 +35,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const auth = await getAuthUser(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!UUID_REGEX.test(id)) return NextResponse.json({ error: "Invalid UUID format" }, { status: 400 });
 
   const result = await getTaskWithDetails(id);
   if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -186,6 +190,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { id } = await params;
   const auth = await getAuthUser(req);
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!UUID_REGEX.test(id)) return NextResponse.json({ error: "Invalid UUID format" }, { status: 400 });
 
   const result = await getTaskWithDetails(id);
   if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
