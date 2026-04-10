@@ -1,49 +1,51 @@
-# eTask Frontend Fixes — Ralphex Plan
+# eTask — Forward to Bot Feature
 
 ## Context
-eTask is a task tracker Mini App for Telegram (Next.js 15 + Tailwind + Drizzle ORM + Neon Postgres).
-The Mini App runs inside @oooih_bot. This plan fixes frontend UX bugs.
+Currently, to ask the bot to work on a task, users have to:
+1. Open the task card
+2. Add a comment with @oooih_bot mention
+3. Hope the bot picks it up
 
-## Task 1: Task card refresh after mutation
+This is clunky. Better UX: a small button on each task card that opens the bot chat with the task link pre-filled.
+
+## How it works
+- Each task card has a small "🤖" or "Ask bot" button
+- Tapping it constructs a Telegram deep link: `https://t.me/oooih_bot?text=<encoded-task-link>%20`
+  - The `text` param pre-fills the message input with the task link + a space
+  - User adds their instruction and sends
+- Alternatively, if the task is on a board (group chat), the link could open THAT chat instead, with `@oooih_bot <task-link> ` pre-filled
+
+## Task 1: [x] Add forward-to-bot button to TaskCard component
+**File:** `src/components/task-card.tsx`
+**Goal:** Add a small icon button (🤖 or send-arrow) at the right side of the task card, next to the priority/comment count icons. Tapping it should:
+1. Construct the task link: `https://t.me/oooih_bot/open?startapp=task<id>`
+2. Construct the deep link to open Ooih bot DM: `https://t.me/oooih_bot?text=<encoded>`
+3. Open the link via `window.Telegram.WebApp.openTelegramLink(...)` or fallback to `window.open()`
+
+The pre-filled text should be: `<task-link>\n\n` so the user just types their instruction below.
+
+Use a small unobtrusive icon — same size as the existing comment-count icon. Color: muted, becomes accent on hover.
+
+## Task 2: [x] Add forward-to-bot button to TaskDetailSheet
 **File:** `src/components/task-detail-sheet.tsx`
-**Problem:** After changing assignee or moving to a different board, the task card shows stale data. Priority updates work because localTask state is updated, but assignee display reads from `taskData?.assignee` (SWR response) which hasn't polled yet. Board label also stale after move.
-**Fix:** 
-- [x] Verify optimistic update + 5s poll defer works correctly for assignee (localAssignee, mutatedAt)
-- [x] Ensure the board label in the card header reads from `localTask.boardId` (not stale SWR data)
-- [x] Add test for optimistic assignee and board updates
+**Goal:** Same button in the task detail bottom sheet. Place it near the "copy link" button that already exists. Same behavior as Task 1.
 
-## Task 2: Personal inbox assignee support
-**File:** `src/components/task-detail-sheet.tsx`
-**Problem:** When a task is in personal inbox (boardId=null), the AssigneePicker has no members to show because `useMembers(resolvedChatId)` returns nothing (no chatId → no members).
-**Fix:**
-- [x] For personal tasks (boardId=null), aggregate members from all boards or provide fallback
-- [x] Create useAllMembers() hook or pass fallback members list to AssigneePicker
-- [x] Add test for personal inbox assignee picker
+## Task 3: [x] Make the button context-aware (group vs DM)
+**File:** Wherever the button is implemented
+**Goal:** If the task belongs to a board (group chat), the button should offer two options OR default to opening the group chat with `@oooih_bot <link>` pre-filled (using `tg://resolve?domain=<group>&...` or similar).
 
-## Task 3: Task description scrollable
-**File:** `src/components/task-detail-sheet.tsx`
-**Problem:** Long task descriptions are cut off in the card view.
-**Fix:**
-- [x] Ensure description textarea auto-expands or has max-height with scroll
-- [x] Add test for description overflow behavior
+If you can't easily target a group chat with deep link, just open the bot DM by default. Don't over-engineer this — the bot DM works for all cases since the bot has access to all boards.
 
-## Task 4: Board avatars in board picker
-**File:** `src/components/task-detail-sheet.tsx`, function `BoardPicker`
-**Problem:** Board picker dropdown shows letter avatars instead of actual group photos.
-**Fix:**
-- [x] Verify photoUrl rendering is working in BoardPicker
-- [x] Verify homeData.boards response includes photoUrl
-
-## Task 5: Assignee picker shows bot only to admin
-**File:** `src/components/task-detail-sheet.tsx`, function `AssigneePicker`  
-**Problem:** Non-admin users can see and assign to the bot in the member list.
-**Fix:**
-- [x] Filter out bot member (telegramUserId=8433233305) unless current user is admin (telegramUserId=247463948)
-- [x] Get current user's Telegram ID from useTelegram() context and pass to AssigneePicker
-- [x] Add test for bot filtering logic
+## Task 4: [x] i18n labels
+**File:** `src/lib/i18n.ts`
+**Goal:** Add EN and RU labels:
+- `forwardToBot: "Forward to bot"` (EN)
+- `forwardToBot: "Передать боту"` (RU)
+- `askBot: "Ask bot"` (EN, for tooltip)
+- `askBot: "Спросить бота"` (RU)
 
 ## Notes
-- SWR polling interval is 3s (`refreshInterval: 3000` in `src/hooks/use-board.ts`)
-- The `dedupingInterval: 2000` prevents rapid re-fetches
-- All API calls go through `useAuthMutate()` which sends `x-telegram-init-data` header
-- Task detail uses `useTaskDetail(taskId)` for the single-task SWR key
+- The button is small and unobtrusive — don't make it dominant
+- It doesn't replace comments or assignments — it's a quick "send to bot" shortcut
+- The bot will then receive the link in chat, click it (or fetch the task by ID), see the user's instruction, and act
+- This is the cleanest "ask the bot to handle a task" UX
