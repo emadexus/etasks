@@ -56,10 +56,11 @@ export async function upsertMember(boardId: string, telegramUserId: bigint, user
     .limit(1);
 
   if (existing.length > 0) {
-    await db.update(members)
+    const [updated] = await db.update(members)
       .set({ username, firstName, leftAt: null })
-      .where(eq(members.id, existing[0].id));
-    return existing[0];
+      .where(eq(members.id, existing[0].id))
+      .returning();
+    return updated;
   }
 
   const [member] = await db.insert(members).values({
