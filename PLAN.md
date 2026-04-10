@@ -38,9 +38,9 @@ The Mini App runs inside @oooih_bot. This plan fixes frontend UX bugs.
 **File:** `src/components/task-detail-sheet.tsx`, function `AssigneePicker`  
 **Problem:** Non-admin users can see and assign to the bot in the member list.
 **Fix:**
-- [ ] Filter out bot member (telegramUserId=8433233305) unless current user is admin (telegramUserId=247463948)
-- [ ] Get current user's Telegram ID from useTelegram() context and pass to AssigneePicker
-- [ ] Add test for bot filtering logic
+- [x] Filter out bot member (telegramUserId=8433233305) unless current user is admin (telegramUserId=247463948)
+- [x] Get current user's Telegram ID from useTelegram() context and pass to AssigneePicker
+- [x] Add test for bot filtering logic
 
 ## Notes
 - SWR polling interval is 3s (`refreshInterval: 3000` in `src/hooks/use-board.ts`)

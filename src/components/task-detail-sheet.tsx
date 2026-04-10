@@ -202,11 +202,17 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
   );
   // For personal inbox tasks (no chatId), fall back to aggregated members from all boards
   const effectiveMembers = membersData || allMembersData || [];
+  // Filter out bot from member list unless current user is admin
+  const BOT_TELEGRAM_ID = "8433233305";
+  const ADMIN_TELEGRAM_ID = "247463948";
+  const filteredMembers = userId === ADMIN_TELEGRAM_ID
+    ? effectiveMembers
+    : effectiveMembers.filter((m: any) => String(m.telegramUserId) !== BOT_TELEGRAM_ID);
   const { updateTask, addComment, moveTask, deleteTask, createTask } = useTaskActions(resolvedChatId);
   const { data: attachmentsData, mutate: mutateAttachments } = useAttachments(activeId);
   const { uploadFile } = useAttachmentActions();
   const { showToast } = useToast();
-  const { lang } = useTelegram();
+  const { lang, userId } = useTelegram();
 
   const [localTask, setLocalTask] = useState<any>(isDraft ? {
     id: null, status: "todo", priority: "medium", boardId: propBoardId || null,
@@ -434,7 +440,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
             <CycleLabel value={task.priority} map={priorityMap} onCycle={(next) => handleUpdate("priority", next)} />
             <AssigneePicker
               assignee={assignee}
-              members={effectiveMembers}
+              members={filteredMembers}
               onChange={(id) => handleUpdate("assigneeId", id)}
             />
             <BoardPicker
