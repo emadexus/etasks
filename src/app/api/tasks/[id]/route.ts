@@ -19,6 +19,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const result = await getTaskWithDetails(id);
   if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const isOwner = result.task.ownerId === auth.dbUserId;
+  if (result.task.boardId && !isOwner) {
+    const member = await getMemberByTelegramId(result.task.boardId, auth.userId);
+    if (!member) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  } else if (!result.task.boardId && !isOwner) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const reminders = await getRemindersForTask(id);
 
   return NextResponse.json({
