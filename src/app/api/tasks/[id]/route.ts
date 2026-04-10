@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/telegram/auth";
 import { db } from "@/lib/db";
-import { tasks, taskReminders, comments, members, boards } from "@/lib/db/schema";
+import { tasks, taskReminders, taskAttachments, comments, members, boards } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getTaskWithDetails, getMemberByTelegramId, getRemindersForTask } from "@/lib/db/queries";
 import { cancelReminders, scheduleReminders, toggleReminder } from "@/lib/qstash/reminders";
@@ -214,6 +214,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   await cancelReminders(id);
   await db.delete(taskReminders).where(eq(taskReminders.taskId, id));
+  await db.delete(taskAttachments).where(eq(taskAttachments.taskId, id));
   await db.delete(comments).where(eq(comments.taskId, id));
   await db.delete(tasks).where(eq(tasks.id, id));
 
