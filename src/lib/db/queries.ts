@@ -242,20 +242,7 @@ export async function getFilteredTasks(userId: string, filter: string, projectId
       case "archived":
         whereClause = and(eq(tasks.ownerId, userId), sql`${tasks.archivedAt} IS NOT NULL`);
         break;
-      case "ooih": {
-        // Bot tasks — across all boards, assigned to bot member records
-        const botMembers = await db.select({ id: members.id }).from(members)
-          .where(eq(members.telegramUserId, BigInt("8433233305")));
-        const bIds = botMembers.map(m => m.id);
-        if (bIds.length === 0) return [];
-        whereClause = and(
-          sql`${tasks.assigneeId} IN (${sql.join(bIds.map(id => sql`${id}`), sql`, `)})`,
-          sql`${tasks.status} != 'done'`,
-          isNull(tasks.archivedAt),
-        );
-        break;
-      }
-      default: // "all"
+default: // "all"
         whereClause = and(baseWhere, sql`${tasks.status} != 'done'`);
         break;
     }

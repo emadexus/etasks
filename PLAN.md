@@ -25,7 +25,7 @@ Files to read for context:
 **Problem:** `getSmartFilterCounts` calculates an `ooih` count by querying bot member records. This is dead code now.
 **Fix:** Remove the bot member ID lookup and `ooihCount` calculation. Remove `ooih: ooihCount` from the returned object. Remove any references to the bot Telegram ID in this function.
 
-## Task 3: [ ] Remove ooih filter from getFilteredTasks
+## Task 3: [x] Remove ooih filter from getFilteredTasks
 **File:** `src/lib/db/queries.ts` (`getFilteredTasks`)
 **Problem:** The function has a `case "ooih":` branch that queries bot member tasks across all boards. Dead code.
 **Fix:** Remove the entire `case "ooih":` block.
