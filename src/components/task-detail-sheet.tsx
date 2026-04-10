@@ -194,10 +194,10 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
   const { data: homeData } = useHome();
 
   // Resolve the correct chatId from the task's boardId (not the URL's chatId)
-  const taskBoardId = taskData?.task?.boardId;
+  const taskBoardId = taskData?.task?.boardId ?? (isDraft ? propBoardId : undefined);
   const resolvedChatId = taskBoardId
     ? (homeData?.boards as any[])?.find((b: any) => b.id === taskBoardId)?.chatId || chatId
-    : chatId;
+    : null; // personal inbox — no single board chatId, useAllMembers will aggregate
 
   const { lang, userId } = useTelegram();
   const { data: membersData } = useMembers(resolvedChatId);
@@ -452,7 +452,9 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
                 try {
                   setLocalTask((prev: any) => prev ? { ...prev, boardId: newBoardId } : prev);
                   setMutatedAt(Date.now());
-                  await moveTask(task.id, newBoardId);
+                  if (task.id) {
+                    await moveTask(task.id, newBoardId);
+                  }
                   showToast(t("taskMoved"));
                 } catch (e) {
                   console.error("Move failed:", e);
