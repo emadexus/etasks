@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { t } from "@/lib/i18n";
+import { openBotDeepLink } from "@/lib/telegram-links";
 
 interface TaskCardProps {
   task: {
@@ -75,6 +76,7 @@ function CompletionBurst() {
   return <div className="completion-burst">{particles}</div>;
 }
 
+
 export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }: TaskCardProps) {
   const [animating, setAnimating] = useState(false);
   const [showBurst, setShowBurst] = useState(false);
@@ -100,7 +102,7 @@ export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const next = isDone ? "todo" : task.status === "todo" ? "in_progress" : "done";
+    const next = isDone ? "todo" : (task.status === "todo" ? "in_progress" : "done");
 
     if (next === "done") {
       // Completion celebration
@@ -119,6 +121,11 @@ export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }
       setTimeout(() => setAnimating(false), 300);
       onToggleStatus(task.id, next);
     }
+  };
+
+  const handleForward = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    openBotDeepLink(task.id);
   };
 
   return (
@@ -219,6 +226,19 @@ export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }
               </div>
             )}
           </div>
+
+          {!isDone && (
+            <button
+              className="ml-auto flex h-6 w-6 flex-shrink-0 items-center justify-center self-center rounded-md opacity-40 transition-opacity active:opacity-100"
+              onClick={handleForward}
+              title={t("forwardToBot")}
+            >
+              <svg width={14} height={14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2L7 9" />
+                <path d="M14 2L9.5 14L7 9L2 6.5L14 2Z" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
     </div>
