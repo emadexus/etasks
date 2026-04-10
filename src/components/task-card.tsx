@@ -15,7 +15,7 @@ interface TaskCardProps {
     assigneeId: string | null;
     tags: string | null;
     checklist: string | null;
-    boardId?: string | null;
+    boardId: string | null;
   };
   assignee: {
     firstName: string;
@@ -126,7 +126,7 @@ export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }
 
   const handleForward = (e: React.MouseEvent) => {
     e.stopPropagation();
-    openBotDeepLink(task.id, task.boardId);
+    openBotDeepLink(task.id);
   };
 
   return (
@@ -232,7 +232,7 @@ export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }
             <button
               className="ml-auto flex h-6 w-6 flex-shrink-0 items-center justify-center self-center rounded-md opacity-40 transition-opacity active:opacity-100"
               onClick={handleForward}
-              title={t("askBot")}
+              title={t("forwardToBot")}
             >
               <svg width={14} height={14} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14 2L7 9" />

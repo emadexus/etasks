@@ -34,7 +34,6 @@ const translations = {
     duePrefix: "due",
     plannedPrefix: "planned",
     forwardToBot: "Forward to bot",
-    askBot: "Ask bot",
 
     // Task detail
     statusTodo: "To do",
@@ -185,7 +184,6 @@ const translations = {
     duePrefix: "до",
     plannedPrefix: "план",
     forwardToBot: "Передать боту",
-    askBot: "Спросить бота",
 
     // Task detail
     statusTodo: "К выполнению",
