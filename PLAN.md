@@ -15,7 +15,7 @@ Files to read for context:
 - `src/app/api/home/route.ts` — counts including ooih
 - `src/lib/i18n.ts` — "ooih" labels
 
-## Task 1: [ ] Remove "Ooih Bot" smart filter from home screen
+## Task 1: [x] Remove "Ooih Bot" smart filter from home screen
 **File:** `src/components/home-screen.tsx`
 **Problem:** The smart filters list includes an "ooih" entry that shows bot tasks. With the bot's tasks moved out of eTask entirely, this filter is dead.
 **Fix:** Remove the `{ key: "ooih", ... }` entry from the `smartFilters` array. Remove the admin check filter (`.filter(f => f.key !== "ooih" || tgUserId === "247463948")`) since it's no longer needed. Remove the "bot" icon case from the FilterIcon component.
