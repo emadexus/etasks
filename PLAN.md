@@ -31,8 +31,8 @@ The Mini App runs inside @oooih_bot. This plan fixes frontend UX bugs.
 **File:** `src/components/task-detail-sheet.tsx`, function `BoardPicker`
 **Problem:** Board picker dropdown shows letter avatars instead of actual group photos.
 **Fix:**
-- [ ] Verify photoUrl rendering is working in BoardPicker
-- [ ] Verify homeData.boards response includes photoUrl
+- [x] Verify photoUrl rendering is working in BoardPicker
+- [x] Verify homeData.boards response includes photoUrl
 
 ## Task 5: Assignee picker shows bot only to admin
 **File:** `src/components/task-detail-sheet.tsx`, function `AssigneePicker`  
