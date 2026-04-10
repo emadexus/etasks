@@ -30,7 +30,7 @@ Files to read for context:
 **Problem:** The function has a `case "ooih":` branch that queries bot member tasks across all boards. Dead code.
 **Fix:** Remove the entire `case "ooih":` block.
 
-## Task 4: [ ] Remove bot task protection from API endpoints
+## Task 4: [x] Remove bot task protection from API endpoints
 **Files:** `src/app/api/admin/tasks/[id]/route.ts`, `src/app/api/admin/tasks/route.ts`, `src/app/api/user/tasks/route.ts`
 **Problem:** GET and PATCH check if the task assignee is the bot (8433233305) and return 404/403 for non-admin. List endpoints filter out bot tasks. All this complexity exists to hide bot tasks from non-admin users.
 **Fix:** Remove the bot Telegram ID checks and the `BOT_TG_ID`/`ADMIN_TG_ID` constants from these route files. Bot tasks no longer exist in eTask, so this filtering is obsolete. Just let the normal authorization (board membership) handle access.

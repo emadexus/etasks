@@ -55,13 +55,7 @@ export async function GET(req: NextRequest) {
     .where(and(...conditions))
     .orderBy(orderBy);
 
-  // Filter out bot tasks for non-admin users
-  const BOT_TG_ID = BigInt("8433233305");
-  const ADMIN_TG_ID = BigInt("247463948");
-  const isAdmin = auth.userId === ADMIN_TG_ID;
-
   const serialized = result
-    .filter((r) => isAdmin || r.assignee?.telegramUserId !== BOT_TG_ID)
     .map((r) => ({
       ...r,
       assignee: r.assignee?.id ? {

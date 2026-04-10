@@ -16,13 +16,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const result = await getTaskWithDetails(id);
   if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Bot task protection: non-admin cannot view bot tasks
-  const BOT_TG_ID = BigInt("8433233305");
-  const ADMIN_TG_ID = BigInt("247463948");
-  if (result.assignee?.telegramUserId === BOT_TG_ID && auth.userId !== ADMIN_TG_ID) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
   const reminders = await getRemindersForTask(id);
 
   return NextResponse.json({
@@ -44,13 +37,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!result) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const task = result.task;
-
-  // Bot task protection: non-admin cannot modify bot tasks
-  const BOT_TG_ID_PATCH = BigInt("8433233305");
-  const ADMIN_TG_ID_PATCH = BigInt("247463948");
-  if (result.assignee?.telegramUserId === BOT_TG_ID_PATCH && auth.userId !== ADMIN_TG_ID_PATCH) {
-    return NextResponse.json({ error: "Only admin can modify bot tasks" }, { status: 403 });
-  }
 
   // Authorization: task owner can always edit; board tasks require membership
   const isOwner = task.ownerId === auth.dbUserId;
