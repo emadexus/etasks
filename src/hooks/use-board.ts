@@ -109,7 +109,7 @@ export function useAllMembers(boards: { id: string; chatId: string }[] | undefin
       for (const memberList of results) {
         if (!Array.isArray(memberList)) continue;
         for (const m of memberList) {
-          const tuid = m.telegramUserId?.toString();
+          const tuid = m.telegramUserId?.toString() || m.id?.toString();
           if (tuid && !seen.has(tuid)) {
             seen.add(tuid);
             deduped.push(m);
@@ -121,7 +121,7 @@ export function useAllMembers(boards: { id: string; chatId: string }[] | undefin
     [keys, fetcher],
   );
 
-  return useSWR(compositeKey, compositeFetcher, swrOpts);
+  return useSWR(compositeKey, compositeFetcher, { ...swrOpts, refreshInterval: 30000 });
 }
 
 export function useTasks(chatId: string | null, filters?: Record<string, string>) {

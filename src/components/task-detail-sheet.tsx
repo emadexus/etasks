@@ -266,6 +266,27 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
     }
   }, [initialized, taskData, mutatedAt]);
 
+  const handleUpdate = useCallback(async (field: string, value: any) => {
+    // Always update local state (works for drafts before creation)
+    setLocalTask((prev: any) => prev ? { ...prev, [field]: value } : prev);
+    setMutatedAt(Date.now()); // Defer poll sync to prevent blink
+    // Optimistic assignee update
+    if (field === "assigneeId" && effectiveMembers.length > 0) {
+      const member = effectiveMembers.find((m: any) => m.id === value);
+      setLocalAssignee(member || null);
+      setLocalAssigneeSet(true);
+    }
+    // Only send to API if task exists on server
+    if (!activeId) return;
+    setSaving(true);
+    try {
+      await updateTask(activeId, { [field]: value });
+    } catch (e) {
+      console.error(e);
+    }
+    setSaving(false);
+  }, [activeId, updateTask, effectiveMembers]);
+
   // Draft: create task when title is entered
   const handleTitleBlur = useCallback(async () => {
     if (isDraft && !createdId) {
@@ -295,28 +316,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
     } else if (activeId && title !== (taskData?.task?.title || "")) {
       handleUpdate("title", title);
     }
-  }, [isDraft, createdId, title, chatId, createTask, activeId, taskData]);
-
-  const handleUpdate = useCallback(async (field: string, value: any) => {
-    // Always update local state (works for drafts before creation)
-    setLocalTask((prev: any) => prev ? { ...prev, [field]: value } : prev);
-    setMutatedAt(Date.now()); // Defer poll sync to prevent blink
-    // Optimistic assignee update
-    if (field === "assigneeId" && effectiveMembers.length > 0) {
-      const member = effectiveMembers.find((m: any) => m.id === value);
-      setLocalAssignee(member || null);
-      setLocalAssigneeSet(true);
-    }
-    // Only send to API if task exists on server
-    if (!activeId) return;
-    setSaving(true);
-    try {
-      await updateTask(activeId, { [field]: value });
-    } catch (e) {
-      console.error(e);
-    }
-    setSaving(false);
-  }, [activeId, updateTask, effectiveMembers]);
+  }, [isDraft, createdId, title, chatId, createTask, activeId, taskData, handleUpdate]);
 
   const handleMultiUpdate = useCallback(async (updates: Record<string, any>) => {
     if (!activeId) return;
