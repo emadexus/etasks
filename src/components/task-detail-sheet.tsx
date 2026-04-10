@@ -268,6 +268,8 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
 
   const handleUpdate = useCallback(async (field: string, value: any) => {
     // Always update local state (works for drafts before creation)
+    const prevAssignee = localAssignee;
+    const prevAssigneeSet = localAssigneeSet;
     setLocalTask((prev: any) => prev ? { ...prev, [field]: value } : prev);
     setMutatedAt(Date.now()); // Defer poll sync to prevent blink
     // Optimistic assignee update
@@ -283,9 +285,16 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
       await updateTask(activeId, { [field]: value });
     } catch (e) {
       console.error(e);
+      // Revert optimistic update on failure
+      setLocalTask((prev: any) => prev ? { ...prev, [field]: taskData?.task?.[field] } : prev);
+      if (field === "assigneeId") {
+        setLocalAssignee(prevAssignee);
+        setLocalAssigneeSet(prevAssigneeSet);
+      }
+      setMutatedAt(0); // Allow immediate server sync
     }
     setSaving(false);
-  }, [activeId, updateTask, effectiveMembers]);
+  }, [activeId, updateTask, effectiveMembers, localAssignee, localAssigneeSet, taskData]);
 
   // Draft: create task when title is entered
   const handleTitleBlur = useCallback(async () => {
@@ -449,6 +458,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
               currentBoardId={task.boardId}
               boards={homeData?.boards || []}
               onMove={async (newBoardId) => {
+                const prevBoardId = task.boardId;
                 try {
                   setLocalTask((prev: any) => prev ? { ...prev, boardId: newBoardId } : prev);
                   setMutatedAt(Date.now());
@@ -458,6 +468,8 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
                   showToast(t("taskMoved"));
                 } catch (e) {
                   console.error("Move failed:", e);
+                  setLocalTask((prev: any) => prev ? { ...prev, boardId: prevBoardId } : prev);
+                  setMutatedAt(0); // Allow immediate server sync
                   showToast(lang === "ru" ? "Не удалось переместить" : "Move failed");
                 }
               }}
