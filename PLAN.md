@@ -45,7 +45,7 @@ Files to read for context:
 **Problem:** "Ooih Bot" and "Ooih Бот" labels exist in the EN and RU translation maps but are no longer referenced.
 **Fix:** Remove the `ooih:` lines from both EN and RU translation objects.
 
-## Task 7: [ ] Add UUID validation to admin tasks API
+## Task 7: [x] Add UUID validation to admin tasks API
 **File:** `src/app/api/admin/tasks/[id]/route.ts`
 **Problem:** When passed an invalid UUID (8-char short ID), the API crashes with a NeonDbError 500 instead of returning 400. The bot has been hitting this constantly when using short IDs from CLI tools.
 **Fix:** At the top of GET, PATCH, DELETE handlers, validate the `id` param against a UUID v4 regex:

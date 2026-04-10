@@ -7,8 +7,13 @@ import { getTaskWithDetails, getRemindersForTask } from "@/lib/db/queries";
 import { cancelReminders, scheduleReminders, toggleReminder } from "@/lib/qstash/reminders";
 import { createNextRecurrence } from "@/lib/recurrence";
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (!UUID_REGEX.test(id)) {
+    return NextResponse.json({ error: "Invalid UUID format" }, { status: 400 });
+  }
   const admin = getAdminOnlyAuth(req);
   if (!admin) return NextResponse.json({ error: "Admin auth required" }, { status: 401 });
 
@@ -32,6 +37,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (!UUID_REGEX.test(id)) {
+    return NextResponse.json({ error: "Invalid UUID format" }, { status: 400 });
+  }
   const admin = getAdminOnlyAuth(req);
   if (!admin) return NextResponse.json({ error: "Admin auth required" }, { status: 401 });
 
@@ -99,6 +107,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  if (!UUID_REGEX.test(id)) {
+    return NextResponse.json({ error: "Invalid UUID format" }, { status: 400 });
+  }
   const admin = getAdminOnlyAuth(req);
   if (!admin) return NextResponse.json({ error: "Admin auth required" }, { status: 401 });
 
