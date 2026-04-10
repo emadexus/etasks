@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { t } from "@/lib/i18n";
+import { openBotDeepLink } from "@/lib/telegram-links";
 
 interface TaskCardProps {
   task: {
@@ -14,6 +15,7 @@ interface TaskCardProps {
     assigneeId: string | null;
     tags: string | null;
     checklist: string | null;
+    boardId?: string | null;
   };
   assignee: {
     firstName: string;
@@ -75,17 +77,6 @@ function CompletionBurst() {
   return <div className="completion-burst">{particles}</div>;
 }
 
-function openBotDeepLink(taskId: string) {
-  const taskLink = `https://t.me/oooih_bot/open?startapp=task${taskId}`;
-  const text = `${taskLink}\n\n`;
-  const deepLink = `https://t.me/oooih_bot?text=${encodeURIComponent(text)}`;
-  const tg = (window as any).Telegram?.WebApp;
-  if (tg?.openTelegramLink) {
-    tg.openTelegramLink(deepLink);
-  } else {
-    window.open(deepLink, "_blank");
-  }
-}
 
 export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }: TaskCardProps) {
   const [animating, setAnimating] = useState(false);
@@ -135,7 +126,7 @@ export function TaskCard({ task, assignee, commentCount, onTap, onToggleStatus }
 
   const handleForward = (e: React.MouseEvent) => {
     e.stopPropagation();
-    openBotDeepLink(task.id);
+    openBotDeepLink(task.id, task.boardId);
   };
 
   return (

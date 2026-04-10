@@ -30,7 +30,7 @@ Use a small unobtrusive icon — same size as the existing comment-count icon. C
 **File:** `src/components/task-detail-sheet.tsx`
 **Goal:** Same button in the task detail bottom sheet. Place it near the "copy link" button that already exists. Same behavior as Task 1.
 
-## Task 3: [ ] Make the button context-aware (group vs DM)
+## Task 3: [x] Make the button context-aware (group vs DM)
 **File:** Wherever the button is implemented
 **Goal:** If the task belongs to a board (group chat), the button should offer two options OR default to opening the group chat with `@oooih_bot <link>` pre-filled (using `tg://resolve?domain=<group>&...` or similar).
 

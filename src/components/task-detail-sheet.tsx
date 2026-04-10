@@ -9,6 +9,7 @@ import { ReminderChips } from "./reminder-chips";
 import { CalendarPicker } from "./calendar-picker";
 import { useToast } from "./toast";
 import { t } from "@/lib/i18n";
+import { openBotDeepLink, getTaskLink } from "@/lib/telegram-links";
 
 const BOT_TELEGRAM_ID = "8433233305";
 const ADMIN_TELEGRAM_ID = "247463948";
@@ -374,17 +375,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
                   <button
                     className="rounded-md p-1 transition-colors active:bg-white/10"
                     style={{ color: "var(--text-dim)" }}
-                    onClick={() => {
-                      const taskLink = `https://t.me/oooih_bot/open?startapp=task${task.id}`;
-                      const text = `${taskLink}\n\n`;
-                      const deepLink = `https://t.me/oooih_bot?text=${encodeURIComponent(text)}`;
-                      const tg = (window as any).Telegram?.WebApp;
-                      if (tg?.openTelegramLink) {
-                        tg.openTelegramLink(deepLink);
-                      } else {
-                        window.open(deepLink, "_blank");
-                      }
-                    }}
+                    onClick={() => openBotDeepLink(task.id, task.boardId)}
                     title={t("forwardToBot")}
                   >
                     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -396,8 +387,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
                     className="rounded-md p-1 transition-colors active:bg-white/10"
                     style={{ color: "var(--text-dim)" }}
                     onClick={() => {
-                      const botUsername = process.env.NEXT_PUBLIC_BOT_USERNAME || "e_task_bot";
-                      const link = `https://t.me/${botUsername}/open?startapp=task${task.id}`;
+                      const link = getTaskLink(task.id);
                       if (navigator.clipboard?.writeText) {
                         navigator.clipboard.writeText(link).then(() => showToast(lang === "ru" ? "Ссылка скопирована" : "Link copied"));
                       } else {
