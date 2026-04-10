@@ -15,7 +15,7 @@ This is clunky. Better UX: a small button on each task card that opens the bot c
   - User adds their instruction and sends
 - Alternatively, if the task is on a board (group chat), the link could open THAT chat instead, with `@oooih_bot <task-link> ` pre-filled
 
-## Task 1: [ ] Add forward-to-bot button to TaskCard component
+## Task 1: [x] Add forward-to-bot button to TaskCard component
 **File:** `src/components/task-card.tsx`
 **Goal:** Add a small icon button (🤖 or send-arrow) at the right side of the task card, next to the priority/comment count icons. Tapping it should:
 1. Construct the task link: `https://t.me/oooih_bot/open?startapp=task<id>`

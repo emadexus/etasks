@@ -33,6 +33,8 @@ const translations = {
     lessThan1h: "<1h",
     duePrefix: "due",
     plannedPrefix: "planned",
+    forwardToBot: "Forward to bot",
+    askBot: "Ask bot",
 
     // Task detail
     statusTodo: "To do",
@@ -182,6 +184,8 @@ const translations = {
     lessThan1h: "<1ч",
     duePrefix: "до",
     plannedPrefix: "план",
+    forwardToBot: "Передать боту",
+    askBot: "Спросить бота",
 
     // Task detail
     statusTodo: "К выполнению",
