@@ -89,7 +89,8 @@ export const taskAttachments = pgTable("task_attachments", {
 export const taskReminders = pgTable("task_reminders", {
   id: uuid("id").defaultRandom().primaryKey(),
   taskId: uuid("task_id").notNull().references(() => tasks.id),
-  offsetLabel: text("offset_label").notNull(),
+  /** @deprecated no longer the scheduling primitive; may be null for new rows */
+  offsetLabel: text("offset_label"),
   remindAt: timestamp("remind_at").notNull(),
   /** @deprecated kept for DB compat, no longer used */
   qstashMessageId: text("qstash_message_id"),

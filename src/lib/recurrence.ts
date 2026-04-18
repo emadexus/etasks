@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { tasks } from "@/lib/db/schema";
-import { scheduleReminders } from "@/lib/qstash/reminders";
+import { scheduleReminder } from "@/lib/qstash/reminders";
 
 interface RecurrenceRule {
   type: "daily" | "weekly" | "monthly" | "yearly";
@@ -62,7 +62,7 @@ export async function createNextRecurrence(completedTask: typeof tasks.$inferSel
   }).returning();
 
   if (nextDue) {
-    await scheduleReminders(newTask.id, nextDue, ["24h"]);
+    await scheduleReminder(newTask.id, nextDue);
   }
 
   return newTask;

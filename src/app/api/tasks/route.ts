@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { tasks, members, comments, boards } from "@/lib/db/schema";
 import { eq, and, desc, asc, sql, isNull } from "drizzle-orm";
 import { notifyGroup, notifyUser, formatNewTask } from "@/lib/telegram/notify";
-import { scheduleReminders } from "@/lib/qstash/reminders";
+import { scheduleReminder } from "@/lib/qstash/reminders";
 
 export async function GET(req: NextRequest) {
   const auth = getAuthFromRequest(req);
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
       recurrenceRule: recurrenceRule || null,
     }).returning();
 
-    await scheduleReminders(task.id, dueDate, ["24h"]);
+    await scheduleReminder(task.id, dueDate);
 
     let assigneeUsername: string | null = null;
     if (assigneeId) {
@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
   }).returning();
 
   if (dateDue) {
-    await scheduleReminders(task.id, new Date(dateDue), ["24h"]);
+    await scheduleReminder(task.id, new Date(dateDue));
   }
 
   return NextResponse.json(task, { status: 201 });

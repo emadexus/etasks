@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { tasks, taskReminders, comments, taskAttachments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getTaskWithDetails, getRemindersForTask } from "@/lib/db/queries";
-import { cancelReminders, scheduleReminders, toggleReminder } from "@/lib/qstash/reminders";
+import { cancelReminders, scheduleReminder } from "@/lib/qstash/reminders";
 import { createNextRecurrence } from "@/lib/recurrence";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -69,15 +69,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .where(eq(tasks.id, id))
     .returning();
 
-  // Handle deadline changes
+  // Handle deadline changes: cancel existing reminders, schedule new
+  // due-date auto-reminder. Manual extra reminders must be re-added
+  // (since they're absolute, they don't auto-shift with due changes).
   if (body.dateDue !== undefined) {
     await cancelReminders(id);
     if (body.dateDue) {
-      const existingReminders = await getRemindersForTask(id);
-      const activeOffsets = existingReminders.filter(r => !r.sent).map(r => r.offsetLabel);
-      if (activeOffsets.length > 0) {
-        await scheduleReminders(id, new Date(body.dateDue), activeOffsets);
-      }
+      await scheduleReminder(id, new Date(body.dateDue));
     }
   }
 
@@ -88,14 +86,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  // Handle reminder toggles
-  if (body.reminders) {
-    const taskDeadline = body.dateDue ? new Date(body.dateDue) : task.dateDue;
-    if (taskDeadline) {
-      for (const [offset, enabled] of Object.entries(body.reminders)) {
-        await toggleReminder(id, offset, taskDeadline, enabled as boolean);
-      }
+  // Handle reminder mutations: { addReminders: [ISO, ...], removeReminderIds: [id, ...] }
+  if (Array.isArray(body.addReminders)) {
+    const { scheduleReminder } = await import("@/lib/qstash/reminders");
+    for (const iso of body.addReminders) {
+      const d = new Date(iso);
+      if (!isNaN(d.getTime())) await scheduleReminder(id, d);
     }
+  }
+  if (Array.isArray(body.removeReminderIds)) {
+    const { cancelReminder } = await import("@/lib/qstash/reminders");
+    for (const rid of body.removeReminderIds) await cancelReminder(rid);
   }
 
   return NextResponse.json(updated);

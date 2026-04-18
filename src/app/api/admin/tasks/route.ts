@@ -5,7 +5,7 @@ import { tasks, members, boards, users, comments, taskAttachments } from "@/lib/
 import { eq, and, desc, asc, sql, gte, lt, isNull, or, like } from "drizzle-orm";
 import { getBoardByChatId, upsertMember, getOrCreateUser } from "@/lib/db/queries";
 import { notifyGroup, notifyUser, formatNewTask } from "@/lib/telegram/notify";
-import { scheduleReminders } from "@/lib/qstash/reminders";
+import { scheduleReminder } from "@/lib/qstash/reminders";
 
 /**
  * Admin API: Full task management.
@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
     assigneeName,
     createdVia,
     notify: shouldNotify,
-    reminderOffsets,
+    reminderAts,
     tags,
     checklist,
   } = body;
@@ -234,10 +234,13 @@ export async function POST(req: NextRequest) {
       createdVia: createdVia || "admin_api",
     }).returning();
 
-    // Schedule reminders
-    if (dueDate) {
-      const offsets = reminderOffsets || ["24h"];
-      await scheduleReminders(task.id, dueDate, offsets);
+    // Schedule reminders: due-date auto-reminder + any explicit times
+    if (dueDate) await scheduleReminder(task.id, dueDate);
+    if (Array.isArray(reminderAts)) {
+      for (const iso of reminderAts) {
+        const d = new Date(iso);
+        if (!isNaN(d.getTime())) await scheduleReminder(task.id, d);
+      }
     }
 
     // Notify group & assignee if requested (default: true)
@@ -274,9 +277,12 @@ export async function POST(req: NextRequest) {
     createdVia: createdVia || "admin_api",
   }).returning();
 
-  if (dateDue) {
-    const offsets = reminderOffsets || ["24h"];
-    await scheduleReminders(task.id, new Date(dateDue), offsets);
+  if (dateDue) await scheduleReminder(task.id, new Date(dateDue));
+  if (Array.isArray(reminderAts)) {
+    for (const iso of reminderAts) {
+      const d = new Date(iso);
+      if (!isNaN(d.getTime())) await scheduleReminder(task.id, d);
+    }
   }
 
   return NextResponse.json(task, { status: 201 });

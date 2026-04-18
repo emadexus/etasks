@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { tasks, taskReminders, taskAttachments, comments, members, boards } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { getTaskWithDetails, getMemberByTelegramId, getRemindersForTask } from "@/lib/db/queries";
-import { cancelReminders, scheduleReminders, toggleReminder } from "@/lib/qstash/reminders";
+import { cancelReminders, cancelReminder, scheduleReminder } from "@/lib/qstash/reminders";
 import { createNextRecurrence } from "@/lib/recurrence";
 import { notifyGroup, formatAssigneeChanged } from "@/lib/telegram/notify";
 
@@ -139,17 +139,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .where(eq(tasks.id, id))
     .returning();
 
-  // Handle deadline/dateDue changes
+  // Handle deadline/dateDue changes — reminders are absolute, so changing
+  // due cancels all existing reminders and schedules just the new due-date
+  // auto-reminder. Users can re-add extras via the reminders endpoint.
   if (body.dateDue !== undefined) {
     await cancelReminders(id);
     if (body.dateDue) {
-      const existingReminders = await getRemindersForTask(id);
-      const activeOffsets = existingReminders
-        .filter(r => !r.sent)
-        .map(r => r.offsetLabel);
-      if (activeOffsets.length > 0) {
-        await scheduleReminders(id, new Date(body.dateDue), activeOffsets);
-      }
+      await scheduleReminder(id, new Date(body.dateDue));
     }
   }
 
@@ -181,13 +177,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
   }
 
-  // Handle reminder toggles: { reminders: { "1h": true, "7d": false } }
-  if (body.reminders) {
-    const taskDeadline = body.dateDue ? new Date(body.dateDue) : task.dateDue;
-    if (taskDeadline) {
-      for (const [offset, enabled] of Object.entries(body.reminders)) {
-        await toggleReminder(id, offset, taskDeadline, enabled as boolean);
-      }
+  // Handle reminder mutations: { addReminders: [ISO, ...], removeReminderIds: [id, ...] }
+  if (Array.isArray(body.addReminders)) {
+    for (const iso of body.addReminders) {
+      const d = new Date(iso);
+      if (!isNaN(d.getTime())) await scheduleReminder(id, d);
+    }
+  }
+  if (Array.isArray(body.removeReminderIds)) {
+    for (const rid of body.removeReminderIds) {
+      await cancelReminder(rid);
     }
   }
 

@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { useTaskDetail, useComments, useTaskActions, useMembers, useAllMembers, useAttachments, useAttachmentActions, useHome } from "@/hooks/use-board";
 import { useTelegram } from "./telegram-provider";
 import { CommentThread } from "./comment-thread";
-import { ReminderChips } from "./reminder-chips";
+import { ReminderList } from "./reminder-chips";
 import { CalendarPicker } from "./calendar-picker";
 import { useToast } from "./toast";
 import { t } from "@/lib/i18n";
@@ -224,7 +224,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
   }, [isDraft, createdId, chatId, homeData]);
 
   const [initialized, setInitialized] = useState(isDraft);
-  const [localReminders, setLocalReminders] = useState<string[]>([]);
+  const [localReminders, setLocalReminders] = useState<any[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
@@ -245,10 +245,7 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
       setLocalAssigneeSet(true);
       setTitle(taskData.task.title);
       setDescription(taskData.task.description || "");
-      const offsets = (taskData.reminders || [])
-        .filter((r: any) => !r.sent)
-        .map((r: any) => r.offsetLabel);
-      setLocalReminders(offsets);
+      setLocalReminders(taskData.reminders || []);
       setInitialized(true);
     } else if (initialized && taskData?.task) {
       // Re-sync from server poll, but only if no mutation in last 5s
@@ -643,21 +640,22 @@ export function TaskDetailSheet({ taskId, chatId, boardId: propBoardId, onClose 
             )}
           </button>
 
-          {dateDue && (
-            <div className="mb-3">
-              <ReminderChips
-                activeOffsets={localReminders}
-                onToggle={(offset, enabled) => {
-                  setLocalReminders(prev =>
-                    enabled ? [...prev, offset] : prev.filter(o => o !== offset)
-                  );
-                  updateTask(task.id, { reminders: { [offset]: enabled } })
-                    .then(() => mutateTask())
-                    .catch(console.error);
-                }}
-              />
-            </div>
-          )}
+          <div className="mb-3">
+            <ReminderList
+              reminders={localReminders}
+              onAdd={(iso) => {
+                updateTask(task.id, { addReminders: [iso] })
+                  .then(() => mutateTask())
+                  .catch(console.error);
+              }}
+              onRemove={(id) => {
+                setLocalReminders(prev => prev.filter((r: any) => r.id !== id));
+                updateTask(task.id, { removeReminderIds: [id] })
+                  .then(() => mutateTask())
+                  .catch(console.error);
+              }}
+            />
+          </div>
 
           {/* Attachments */}
           <div className="mb-3">
