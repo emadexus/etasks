@@ -41,7 +41,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Task has no due date" }, { status: 400 });
   }
 
-  await scheduleReminders(taskId, deadline, offsets);
+  // Dedupe against existing pending reminders so repeat POSTs are idempotent.
+  // Sent reminders stay as history but don't count as duplicates — if the
+  // user re-adds a 6h reminder AFTER the 6h one already fired, that's valid.
+  const existing = await getRemindersForTask(taskId);
+  const pendingOffsets = new Set(
+    existing.filter((r: { sent: boolean; offsetLabel: string }) => !r.sent).map((r) => r.offsetLabel),
+  );
+  const newOffsets = offsets.filter((o: string) => !pendingOffsets.has(o));
+
+  if (newOffsets.length > 0) {
+    await scheduleReminders(taskId, deadline, newOffsets);
+  }
 
   const reminders = await getRemindersForTask(taskId);
   return NextResponse.json(reminders);
