@@ -10,5 +10,13 @@ services:
       - "127.0.0.1:8083:3000"
     env_file:
       - .env.production
+    networks:
+      - default
+      - postgres
     environment:
       - NODE_ENV=production
+
+networks:
+  postgres:
+    external: true
+    name: postgres_default
