@@ -11,10 +11,10 @@ export async function getOrCreateUser(telegramUserId: bigint, username: string |
 
   if (existing.length > 0) {
     const newUsername = username ?? existing[0].username;
-    const newFirstName = firstName || existing[0].firstName;
+    const newFirstName = firstName || existing[0].firstName || firstName;
     if (existing[0].username !== newUsername || existing[0].firstName !== newFirstName) {
       const [updated] = await db.update(users)
-        .set({ username: newUsername, firstName: newFirstName })
+        .set({ username: newUsername, firstName: newFirstName, name: newFirstName })
         .where(eq(users.id, existing[0].id))
         .returning();
       return updated;
@@ -26,6 +26,7 @@ export async function getOrCreateUser(telegramUserId: bigint, username: string |
     telegramUserId,
     username,
     firstName,
+    name: firstName,
   }).returning();
   return user;
 }
@@ -76,7 +77,7 @@ export async function upsertMember(boardId: string, telegramUserId: bigint, user
       .where(eq(users.telegramUserId, telegramUserId))
       .limit(1);
     if (userRecord.length > 0) {
-      resolvedFirstName = userRecord[0].firstName;
+      resolvedFirstName = userRecord[0].firstName || userRecord[0].name;
       resolvedUsername = resolvedUsername ?? userRecord[0].username;
     } else {
       resolvedFirstName = firstName || "Unknown";
